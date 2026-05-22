@@ -77,12 +77,24 @@ class ContaminantConfig:
 Centralizado en `utils/logging.py`. Nunca `print()` en producción.
 
 ```python
-from utils.logging import get_logger
+from utils.logging import get_logger, setup_logging
 logger = get_logger(__name__)
 logger.info("Datos cargados", extra={"rows": 1000, "zone": "CE"})
 ```
 
-**Principio:** Logs con contexto suficiente para depurar sin debugger. Loggear: inicio de pipeline, registros procesados, descartados (razón), fin, estado.
+**Reglas obligatorias:**
+- `setup_logging()` se llama **una sola vez** en el entry point (`main()` / `__main__.py`), nunca en módulos internos.
+- `get_logger(__name__)` al inicio de cada módulo, como variable de módulo (no dentro de funciones).
+- `extra={}` siempre con contexto relevante: `station_id`, `year`, `rows`, `zone`, `bytes`, `error`.
+- Nunca loggear credenciales, tokens ni rutas absolutas del sistema.
+- Niveles: `DEBUG` para detalle interno, `INFO` para hitos del pipeline, `WARNING` para degradación recuperable, `ERROR` para fallo con reintento, `CRITICAL` para fallo irrecuperable.
+
+**Qué loggear en cada pipeline:**
+- Inicio: parámetros de ejecución
+- Por registro/estación/año: procesados, saltados (razón), fallidos
+- Fin: estadísticas totales (`downloaded`, `skipped`, `failed`)
+
+**Principio:** Logs con contexto suficiente para depurar sin debugger.
 
 ## ETL — Medallion
 

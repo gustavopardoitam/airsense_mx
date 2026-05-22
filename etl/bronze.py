@@ -45,7 +45,14 @@ def ingest_rama_simat() -> None:
     Raises:
         DataUnavailableError: Si la API no está disponible
     """
-    logger.info("TODO: Ingestión RAMA/SIMAT")
+    logger.info(
+        "Iniciando ingestión RAMA/SIMAT",
+        extra={"source": "rama_simat", "stage": "bronze"},
+    )
+    logger.warning(
+        "TODO: ingest_rama_simat no implementado",
+        extra={"source": "rama_simat"},
+    )
 
 
 def ingest_open_meteo() -> None:
@@ -60,7 +67,14 @@ def ingest_open_meteo() -> None:
     Raises:
         DataUnavailableError: Si la API no está disponible
     """
-    logger.info("TODO: Ingestión Open-Meteo")
+    logger.info(
+        "Iniciando ingestión Open-Meteo",
+        extra={"source": "open_meteo", "stage": "bronze"},
+    )
+    logger.warning(
+        "TODO: ingest_open_meteo no implementado",
+        extra={"source": "open_meteo"},
+    )
 
 
 def ingest_pcaa() -> None:
@@ -74,4 +88,11 @@ def ingest_pcaa() -> None:
     Raises:
         DataUnavailableError: Si la fuente no está disponible
     """
-    logger.info("TODO: Ingestión PCAA")
+    logger.info(
+        "Iniciando ingestión PCAA",
+        extra={"source": "pcaa", "stage": "bronze"},
+    )
+    logger.warning(
+        "TODO: ingest_pcaa no implementado",
+        extra={"source": "pcaa"},
+    )

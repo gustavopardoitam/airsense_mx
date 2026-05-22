@@ -334,7 +334,7 @@ HOURLY_VARIABLES = [
 
 ```bash
 # 1. Clonar
-git clone https://github.com/airsense-mx/airsense_mx.git
+git clone https://github.com/gustavopardoitam/airsense_mx.git
 cd airsense_mx
 
 # 2. Instalar dependencias (determinísticas vía uv.lock)

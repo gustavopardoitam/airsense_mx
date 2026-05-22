@@ -51,6 +51,7 @@ data/raw/*
 data/prep/*
 data/inference/*
 artifacts/logs/*
+logs/
 artifacts/models/*.pkl
 artifacts/models/*.joblib
 artifacts/predictions/*
