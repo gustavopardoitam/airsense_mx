@@ -445,6 +445,43 @@ data/raw/openmeteo/
 
 ---
 
+## Cómo Subir a Bronze (AWS S3)
+
+**Requisitos:** Bucket S3, AWS credentials con permisos S3, archivos en `data/raw/`.
+
+**Nota:** Bronze es una capa **sin procesamiento** — copia exacta de los archivos originales de `data/raw/` a S3.
+
+**Ejecución:**
+
+```bash
+# Configura credenciales AWS
+aws configure
+
+# Copia archivos a S3 (sin transformación)
+uv run python -m etl.bronze --bucket itam-analytics-antonio
+uv run python -m etl.bronze --bucket itam-analytics-antonio --dry-run
+```
+
+**Output esperado:**
+
+```
+INFO | ✓ Subido: archivo1.json → s3://itam-analytics-antonio/air-sense-mx/bronze/archivo1.json
+INFO | ✓ Subido: archivo2.csv → s3://itam-analytics-antonio/air-sense-mx/bronze/archivo2.csv
+INFO | Archivos subidos    : 2
+INFO | Bytes totales       : 1500.50 (1.50 MB)
+```
+
+**Estructura en S3:**
+
+```
+s3://itam-analytics-antonio/air-sense-mx/bronze/
+├── archivo1.json
+├── archivo2.csv
+└── ...
+```
+
+---
+
 ## Testing
 
 ### Unit Tests (sin I/O real)
