@@ -58,6 +58,7 @@ TIMEZONE = "America/Mexico_City"
 REQUEST_TIMEOUT_SECONDS = 60
 RETRY_ATTEMPTS = 3
 RETRY_BACKOFF_SECONDS = 5.0
+RATE_LIMIT_WAIT_SECONDS = 3  # 3 segundos para 429 Too Many Requests
 
 
 # ── Funciones públicas ────────────────────────────────────────────────────────
@@ -138,7 +139,8 @@ def download_openmeteo_year(
     """Descarga datos horarios de Open-Meteo para una estación y un año.
 
     Reintenta hasta ``RETRY_ATTEMPTS`` veces con backoff exponencial ante
-    errores de red o respuestas 5xx.
+    errores de red o respuestas 5xx. Para HTTP 429 (Too Many Requests), espera
+    ``RATE_LIMIT_WAIT_SECONDS`` antes de reintentar.
 
     Args:
         station_id: Identificador de la estación (usado solo para logging).
@@ -216,7 +218,21 @@ def download_openmeteo_year(
             return payload
 
         except requests.HTTPError as exc:
-            # Errores 4xx no son recuperables
+            # Error 429 (Too Many Requests): esperar 1 hora completa, no abortar
+            if exc.response is not None and exc.response.status_code == 429:
+                logger.warning(
+                    "Límite de tasa de Open-Meteo alcanzado (HTTP 429)",
+                    extra={
+                        "station_id": station_id,
+                        "year": year,
+                        "attempt": attempt,
+                        "wait_s": RATE_LIMIT_WAIT_SECONDS,
+                    },
+                )
+                time.sleep(RATE_LIMIT_WAIT_SECONDS)
+                last_exc = exc
+                continue
+            # Otros 4xx no son recuperables
             if exc.response is not None and exc.response.status_code < 500:
                 raise
             last_exc = exc
