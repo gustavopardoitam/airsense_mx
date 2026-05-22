@@ -19,14 +19,14 @@
 
 ## Scope
 
-**Antonio (SCOPE):**
+**Antonio:**
 - Bronze: SIMAT + Open-Meteo → JSON/Parquet (5 zonas, 5 años)
 - Silver: Normalizar timestamps (UTC-6), long format, validar
 - Streamlit: 3+ tabs (dashboard, forecast, contingencias)
 - Bedrock: NLP explicaciones
 - Deployment: EC2 t3.small
 
-**Gustavo (NO COPILOT):**
+**Gustavo:**
 - Features + training
 - LightGBM + SHAP
 - Gold batch predictions
@@ -47,7 +47,7 @@
 
 - **Type hints** en todas las funciones públicas
 - **`from __future__ import annotations`** en cada módulo
-- **Google docstrings** para funciones, clases, módulos públicos
+- **Google docstrings** para funciones, clases, módulos públicos — **siempre en español**
 - **`pathlib.Path`** no `os.path`
 - **Dataclasses congeladas** para config: `@dataclass(frozen=True)`
 - **joblib** para modelos, **awswrangler** para S3

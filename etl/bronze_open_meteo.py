@@ -1,28 +1,29 @@
-"""Bronze layer: ingestion of Open-Meteo historical weather data.
+"""Capa Bronze: ingesta de datos meteorológicos históricos de Open-Meteo.
 
-Downloads hourly meteorological data for 5 zone centroids in the ZMVM
-and stores raw JSON responses in S3 Bronze.
+Descarga datos horarios de meteorología para 5 centroides de zona en la ZMVM
+y almacena respuestas JSON crudas en S3 Bronze.
 
-Design decisions:
-- One request per (zone, year) → 25 API calls total for 5 zones × 5 years.
-  Rationale: Open-Meteo uses a ~9km ECMWF grid. Stations within the same
-  zone receive virtually identical values, so per-zone centroids are enough.
-- Idempotent: checks S3 key existence via head_object before every API call.
-  Safe to run multiple times without overwriting valid data.
-- Raw JSON stored as-is (Bronze principle: zero transformation here).
-  A metadata envelope (_metadata key) is added without touching the API body.
-- Timezone: America/Mexico_City. Pre-Nov-2022 data includes DST (UTC-5 summer).
-  Silver ETL is responsible for normalizing to consistent UTC-6.
+Decisiones de diseño:
+- Una solicitud por (zona, año) → 25 llamadas API total para 5 zonas × 5 años.
+  Justificación: Open-Meteo utiliza una grilla ECMWF de ~9km. Estaciones dentro
+  de la misma zona reciben valores prácticamente idénticos, por lo que los
+  centroides por zona son suficientes.
+- Idempotente: verifica la existencia de la clave S3 vía head_object antes de
+  cada llamada API. Es seguro ejecutar múltiples veces sin sobrescribir datos válidos.
+- JSON crudo almacenado tal cual (principio Bronze: cero transformación aquí).
+  Se añade un sobre de metadatos (_metadata) sin modificar el cuerpo de la API.
+- Timezone: America/Mexico_City. Datos pre-Nov-2022 incluyen DST (UTC-5 verano).
+  El ETL de Silver es responsable de normalizar a UTC-6 consistente.
 
-S3 path:
+Ruta S3:
     s3://airsense-mx/bronze/open_meteo/zone={zone}/year={year}/
         meteo_{zone}_{year}.json
 
-Usage:
-    python -m etl.bronze_open_meteo                   # all zones, 2020-2024
+Uso:
+    python -m etl.bronze_open_meteo                   # todas las zonas, 2020-2024
     python -m etl.bronze_open_meteo --years 2023 2024
     python -m etl.bronze_open_meteo --zones NO NE
-    python -m etl.bronze_open_meteo --dry-run         # fetch but skip S3 write
+    python -m etl.bronze_open_meteo --dry-run         # obtener pero omitir S3
 """
 
 from __future__ import annotations
@@ -86,16 +87,16 @@ SLEEP_BETWEEN_REQUESTS = 1.0  # seconds — polite usage of the free API
 
 
 def build_s3_key(zone: str, year: int) -> str:
-    """Returns the S3 key for a given zone and year.
+    """Construye la clave S3 para una zona y año dados.
 
     Args:
-        zone: Zone identifier (CE/NO/NE/SO/SE).
-        year: Calendar year (e.g. 2020).
+        zone: Identificador de zona (CE/NO/NE/SO/SE).
+        year: Año calendario (p.ej. 2020).
 
     Returns:
-        Full S3 key without bucket prefix.
+        Clave S3 completa sin prefijo del bucket.
 
-    Example:
+    Ejemplo:
         >>> build_s3_key("NO", 2022)
         'bronze/open_meteo/zone=NO/year=2022/meteo_NO_2022.json'
     """
@@ -103,21 +104,21 @@ def build_s3_key(zone: str, year: int) -> str:
 
 
 def s3_key_exists(s3_client: Any, bucket: str, key: str) -> bool:
-    """Checks whether an S3 object already exists (idempotency gate).
+    """Verifica si un objeto S3 ya existe (puerta de idempotencia).
 
-    Uses head_object which is cheaper than get_object and does not
-    download the body.
+    Utiliza head_object que es más económico que get_object y no
+    descarga el cuerpo del objeto.
 
     Args:
-        s3_client: Boto3 S3 client.
-        bucket: S3 bucket name.
-        key: S3 object key.
+        s3_client: Cliente S3 de Boto3.
+        bucket: Nombre del bucket S3.
+        key: Clave del objeto S3.
 
     Returns:
-        True if the object exists, False if it returns 404.
+        True si el objeto existe, False si retorna 404.
 
     Raises:
-        ClientError: For any error other than 404 (e.g. permission denied).
+        ClientError: Para cualquier error distinto a 404 (p.ej. permiso denegado).
     """
     try:
         s3_client.head_object(Bucket=bucket, Key=key)
@@ -129,13 +130,13 @@ def s3_key_exists(s3_client: Any, bucket: str, key: str) -> bool:
 
 
 def upload_json_to_s3(s3_client: Any, bucket: str, key: str, data: dict) -> None:
-    """Serializes a dict to compact JSON and uploads it to S3.
+    """Serializa un diccionario a JSON compacto y lo carga a S3.
 
     Args:
-        s3_client: Boto3 S3 client.
-        bucket: Target bucket.
-        key: Target key.
-        data: Dict to upload.
+        s3_client: Cliente S3 de Boto3.
+        bucket: Bucket destino.
+        key: Clave destino.
+        data: Diccionario a cargar.
     """
     body = json.dumps(data, ensure_ascii=False)  # compact, no indent → smaller file
     s3_client.put_object(
@@ -156,25 +157,25 @@ def upload_json_to_s3(s3_client: Any, bucket: str, key: str, data: dict) -> None
 
 
 def fetch_open_meteo(zone: str, lat: float, lon: float, year: int) -> dict:
-    """Calls Open-Meteo archive API for one (zone, year) combination.
+    """Llama a la API de archivo de Open-Meteo para una combinación (zona, año).
 
-    Note on the returned latitude/longitude: Open-Meteo snaps coordinates to
-    the nearest ECMWF grid point (~9km resolution). The response includes the
-    actual grid point used, which may differ slightly from lat/lon requested.
-    Both are preserved in the Bronze envelope for traceability.
+    Nota sobre latitud/longitud devueltas: Open-Meteo ajusta (snap) coordenadas
+    al punto de grilla ECMWF más cercano (~9km resolución). La respuesta incluye
+    el punto de grilla real usado, que puede diferir ligeramente de lat/lon
+    solicitados. Ambos se preservan en el sobre Bronze para trazabilidad.
 
     Args:
-        zone: Zone identifier, used only for logging context.
-        lat: Centroid latitude.
-        lon: Centroid longitude.
-        year: Year to fetch (full calendar year Jan 1 – Dec 31).
+        zone: Identificador de zona, usado solo para contexto de logging.
+        lat: Latitud del centroide.
+        lon: Longitud del centroide.
+        year: Año a obtener (año calendario completo 1 ene – 31 dic).
 
     Returns:
-        Raw API response dict (keys: latitude, longitude, hourly, hourly_units, …).
+        Diccionario de respuesta cruda de API (claves: latitude, longitude, hourly, …).
 
     Raises:
-        requests.HTTPError: If the API returns a non-2xx status code.
-        requests.Timeout: If the API does not respond in 60 seconds.
+        requests.HTTPError: Si la API retorna código de estado no-2xx.
+        requests.Timeout: Si la API no responde en 60 segundos.
     """
     params = {
         "latitude": lat,
@@ -194,19 +195,19 @@ def fetch_open_meteo(zone: str, lat: float, lon: float, year: int) -> dict:
 
 
 def wrap_with_metadata(payload: dict, zone: str, year: int, source_url: str) -> dict:
-    """Adds a Bronze metadata envelope to the raw API response.
+    """Añade un sobre de metadatos Bronze a la respuesta cruda de la API.
 
-    Bronze principle: never modify source data; only prepend _metadata.
-    Silver ETL strips _metadata before building silver.meteo_horario.
+    Principio Bronze: nunca modificar datos de fuente; solo prepend _metadata.
+    El ETL de Silver retira _metadata antes de construir silver.meteo_horario.
 
     Args:
-        payload: Raw dict from Open-Meteo (unmodified).
-        zone: Zone identifier for this request.
-        year: Year for this request.
-        source_url: Base URL used (for reproducibility).
+        payload: Diccionario crudo de Open-Meteo (sin modificaciones).
+        zone: Identificador de zona para esta solicitud.
+        year: Año para esta solicitud.
+        source_url: URL base utilizada (para reproducibilidad).
 
     Returns:
-        New dict with _metadata as the first key, source data spread after it.
+        Nuevo diccionario con _metadata como primer clave, datos de fuente después.
     """
     return {
         "_metadata": {
@@ -237,26 +238,26 @@ def ingest_zone_year(
     bucket: str,
     dry_run: bool = False,
 ) -> str:
-    """Ingests one (zone, year) combination end-to-end.
+    """Ingesta una combinación (zona, año) de principio a fin.
 
-    Workflow:
-        1. Build the target S3 key.
-        2. If key exists → return "skipped" (idempotency).
-        3. Call Open-Meteo API.
-        4. Wrap response with metadata envelope.
-        5. Upload to S3 (or skip if dry_run).
+    Flujo:
+        1. Construye la clave S3 destino.
+        2. Si la clave existe → retorna "skipped" (idempotencia).
+        3. Llama a la API de Open-Meteo.
+        4. Envuelve respuesta con sobre de metadatos.
+        5. Carga a S3 (u omite si dry_run).
 
     Args:
-        s3_client: Boto3 S3 client.
-        zone: Zone identifier.
-        lat: Centroid latitude.
-        lon: Centroid longitude.
-        year: Year to ingest.
-        bucket: Target S3 bucket.
-        dry_run: If True, fetches from API but skips the S3 upload.
+        s3_client: Cliente S3 de Boto3.
+        zone: Identificador de zona.
+        lat: Latitud del centroide.
+        lon: Longitud del centroide.
+        year: Año a ingestar.
+        bucket: Bucket S3 destino.
+        dry_run: Si es True, obtiene de API pero omite la carga a S3.
 
     Returns:
-        One of: "skipped", "uploaded", "dry_run".
+        Uno de: "skipped", "uploaded", "dry_run".
     """
     key = build_s3_key(zone, year)
 
@@ -296,12 +297,12 @@ def main(
     years: list[int] | None = None,
     dry_run: bool = False,
 ) -> None:
-    """Orchestrates Bronze ingestion for all requested (zone, year) combinations.
+    """Orquesta la ingesta Bronze para todas las combinaciones (zona, año) solicitadas.
 
     Args:
-        zones: Subset of zones to ingest. Defaults to all 5 ZONE_CENTROIDS.
-        years: List of years to ingest. Defaults to DEFAULT_YEARS.
-        dry_run: If True, calls the API but does not write to S3.
+        zones: Subconjunto de zonas a ingestar. Por defecto todas las 5 ZONE_CENTROIDS.
+        years: Lista de años a ingestar. Por defecto DEFAULT_YEARS.
+        dry_run: Si es True, llama a la API pero no escribe en S3.
     """
     setup_logging()
 
