@@ -30,18 +30,19 @@ from etl.rama_bronze import (
 # Constantes de prueba
 # ---------------------------------------------------------------------------
 
-XLS_CONTENT = b"\xd0\xcf\x11\xe0" + b"\x00" * 100   # firma XLS clásico válida
-XLSX_CONTENT = b"PK\x03\x04" + b"\x00" * 100          # firma XLSX (ZIP) válida
+XLS_CONTENT = b"\xd0\xcf\x11\xe0" + b"\x00" * 100  # firma XLS clásico válida
+XLSX_CONTENT = b"PK\x03\x04" + b"\x00" * 100  # firma XLSX (ZIP) válida
 HTML_CONTENT = b"<html><body>Error del portal</body></html>"
 EMPTY_CONTENT = b""
 RANDOM_CONTENT = b"\x00\x01\x02\x03" * 50
 
 # HTML con JS redirect que incluye URL del ZIP (respuesta real del portal)
 HTML_WITH_ZIP_URL = (
-    "<html><script>setTimeout(\"location.href="
+    '<html><script>setTimeout("location.href='
     "'https://aire.cdmx.gob.mx/descargas/Opendata/Bases_publicas/RAMA/21RAMA.zip'"
-    "\",1000);</script></html>"
+    '",1000);</script></html>'
 )
+
 
 # ZIP de prueba con XLS de O3 para año 2021
 def _make_test_zip(year: int, pollutant: str, content: bytes = XLS_CONTENT) -> bytes:
@@ -128,11 +129,15 @@ class TestBuildOutputPath:
 
     def test_different_filenames_produce_different_paths(self, tmp_path: Path) -> None:
         """Archivos distintos deben generar rutas distintas."""
-        assert build_output_path(tmp_path, "2021O3.xls", 2021) != build_output_path(tmp_path, "2021PM25.xls", 2021)
+        assert build_output_path(tmp_path, "2021O3.xls", 2021) != build_output_path(
+            tmp_path, "2021PM25.xls", 2021
+        )
 
     def test_different_years_produce_different_paths(self, tmp_path: Path) -> None:
         """Años distintos deben generar rutas distintas."""
-        assert build_output_path(tmp_path, "2021O3.xls", 2021) != build_output_path(tmp_path, "2022O3.xls", 2022)
+        assert build_output_path(tmp_path, "2021O3.xls", 2021) != build_output_path(
+            tmp_path, "2022O3.xls", 2022
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -429,7 +434,7 @@ class TestRunRamaBronzeIngestion:
     def test_excel_downloaded_once_per_year_for_multiple_pollutants(
         self, tmp_path: Path
     ) -> None:
-        """El ZIP anual debe descargarse una sola vez por año sin importar contaminantes."""
+        """El ZIP anual se descarga una sola vez por año, sin importar contaminantes."""
         zip_bytes = _make_multi_zip(2023, ["O3", "PM25", "PM10", "NO2"])
         with patch(
             "etl.rama_bronze.download_rama_excel", return_value=zip_bytes

@@ -1,4 +1,4 @@
-"""Capa Bronze: ingesta de archivos Excel históricos RAMA/SIMAT.
+r"""Capa Bronze: ingesta de archivos Excel históricos RAMA/SIMAT.
 
 Descarga datos históricos de contaminantes atmosféricos (O3, PM25, PM10,
 NO2, SO2, CO) desde el portal oficial de calidad del aire de la CDMX
@@ -25,26 +25,25 @@ Uso:
 from __future__ import annotations
 
 import argparse
-import time
-from datetime import datetime
-from pathlib import Path
-
 import io
 import re
 import ssl
-import urllib3
+import time
 import zipfile
+from datetime import datetime
+from pathlib import Path
 
 import requests
+import urllib3
 from requests.adapters import HTTPAdapter
 from requests.exceptions import HTTPError, RequestException, Timeout
+
+from utils.logging import get_logger, setup_logging
 
 # El portal aire.cdmx.gob.mx usa DH con clave corta (legacy gov server) y CA
 # gubernamental mexicana no incluida en bundles estándar.
 # SECLEVEL=1 + OP_LEGACY_SERVER_CONNECT + send(verify=False) resuelven ambos.
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-from utils.logging import get_logger, setup_logging
 
 logger = get_logger(__name__)
 
@@ -61,8 +60,8 @@ RETRY_BACKOFF_SECONDS: float = 5.0
 
 # Firmas binarias para validación de contenido Excel
 _XLS_MAGIC = b"\xd0\xcf\x11\xe0"  # Compound Document (XLS clásico)
-_XLSX_MAGIC = b"PK\x03\x04"        # ZIP/OOXML (XLSX, XLSM)
-_HTML_MARKER = b"<html"            # Respuesta HTML (error del portal)
+_XLSX_MAGIC = b"PK\x03\x04"  # ZIP/OOXML (XLSX, XLSM)
+_HTML_MARKER = b"<html"  # Respuesta HTML (error del portal)
 
 
 # ---------------------------------------------------------------------------
@@ -252,16 +251,20 @@ def _make_session() -> requests.Session:
     """
     session = requests.Session()
     session.mount("https://", _LegacySSLAdapter())
-    session.headers.update({
-        "User-Agent": "AirSenseMX/1.0 (investigación académica ITAM)",
-        "Referer": RAMA_BASE_URL,
-    })
-    logger.warning("SSL SECLEVEL=1 activo para portal CDMX (servidor legacy gubernamental)")
+    session.headers.update(
+        {
+            "User-Agent": "AirSenseMX/1.0 (investigación académica ITAM)",
+            "Referer": RAMA_BASE_URL,
+        }
+    )
+    logger.warning(
+        "SSL SECLEVEL=1 activo para portal CDMX (servidor legacy gubernamental)"
+    )
     return session
 
 
 def download_rama_excel(session: requests.Session, year: int) -> bytes:
-    """Descarga el ZIP anual RAMA mediante POST al formulario oficial.
+    r"""Descarga el ZIP anual RAMA mediante POST al formulario oficial.
 
     Flujo de descarga:
     1. POST al formulario con seluniano=<YY> para activar la descarga.
@@ -294,7 +297,9 @@ def download_rama_excel(session: requests.Session, year: int) -> bytes:
     for attempt in range(1, RETRY_ATTEMPTS + 1):
         try:
             # Paso 1: POST → HTML con JS redirect
-            post_resp = session.post(url, data=form_data, timeout=REQUEST_TIMEOUT_SECONDS)
+            post_resp = session.post(
+                url, data=form_data, timeout=REQUEST_TIMEOUT_SECONDS
+            )
             post_resp.raise_for_status()
 
             # Paso 2: Extraer URL ZIP del HTML
@@ -312,7 +317,12 @@ def download_rama_excel(session: requests.Session, year: int) -> bytes:
                 )
             logger.info(
                 "ZIP RAMA descargado",
-                extra={"year": year, "bytes": len(content), "zip_url": zip_url, "attempt": attempt},
+                extra={
+                    "year": year,
+                    "bytes": len(content),
+                    "zip_url": zip_url,
+                    "attempt": attempt,
+                },
             )
             return content
         except (HTTPError, ValueError) as exc:
@@ -412,9 +422,7 @@ def run_rama_bronze_ingestion(
             continue
 
         for filename, content in xls_files.items():
-            if pollutants and not any(
-                filename == f"{year}{p}.xls" for p in pollutants
-            ):
+            if pollutants and not any(filename == f"{year}{p}.xls" for p in pollutants):
                 continue
             path = build_output_path(output_dir, filename, year)
             save_excel_file(path, content)
@@ -462,7 +470,10 @@ def _parse_args() -> argparse.Namespace:
         nargs="+",
         default=None,
         metavar="CONTAMINANTE",
-        help="Filtrar contaminantes a guardar (p.ej. O3 PM25 NO2). Sin este flag se guardan todos.",
+        help=(
+            "Filtrar contaminantes a guardar (p.ej. O3 PM25 NO2). "
+            "Sin este flag se guardan todos."
+        ),
     )
     parser.add_argument(
         "--overwrite",
