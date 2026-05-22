@@ -104,47 +104,48 @@ class S3Config:
     Gold: predicciones del modelo listas para Streamlit/Athena
     """
 
-    bucket: str = "airsense-mx"
+    bucket: str = "itam-analytics-antonio"
+    prefix: str = "air-sense-mx"
 
     @property
     def bronze_rama(self) -> str:
         """Ruta S3 para datos Bronze RAMA."""
-        return f"s3://{self.bucket}/bronze/rama/"
+        return f"s3://{self.bucket}/{self.prefix}/bronze/rama/"
 
     @property
     def bronze_openmeteo(self) -> str:
         """Ruta S3 para datos Bronze Open-Meteo."""
-        return f"s3://{self.bucket}/bronze/openmeteo/"
+        return f"s3://{self.bucket}/{self.prefix}/bronze/openmeteo/"
 
     @property
     def bronze_pcaa(self) -> str:
         """Ruta S3 para datos Bronze PCAA."""
-        return f"s3://{self.bucket}/bronze/pcaa/"
+        return f"s3://{self.bucket}/{self.prefix}/bronze/pcaa/"
 
     @property
     def silver_obs(self) -> str:
         """Ruta S3 para observaciones horarias Silver."""
-        return f"s3://{self.bucket}/silver/observaciones_horarias/"
+        return f"s3://{self.bucket}/{self.prefix}/silver/observaciones_horarias/"
 
     @property
     def silver_meteo(self) -> str:
         """Ruta S3 para datos meteorológicos horarios Silver."""
-        return f"s3://{self.bucket}/silver/meteo_horario/"
+        return f"s3://{self.bucket}/{self.prefix}/silver/meteo_horario/"
 
     @property
     def gold_predicciones(self) -> str:
         """Ruta S3 para predicciones diarias Gold."""
-        return f"s3://{self.bucket}/gold/predicciones_diarias/"
+        return f"s3://{self.bucket}/{self.prefix}/gold/predicciones_diarias/"
 
     @property
     def dim_estaciones(self) -> str:
         """Ruta S3 para el catálogo de estaciones."""
-        return f"s3://{self.bucket}/dim/dim_estaciones.csv"
+        return f"s3://{self.bucket}/{self.prefix}/dim/dim_estaciones.csv"
 
     @property
     def models(self) -> str:
         """Ruta S3 para artefactos de modelos ML."""
-        return f"s3://{self.bucket}/models/"
+        return f"s3://{self.bucket}/{self.prefix}/models/"
 
 
 # Catálogo Glue

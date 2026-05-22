@@ -1,15 +1,17 @@
 """ETL Bronze → Silver para datos Open-Meteo.
 
 Lee archivos JSON históricos por estación, aplana la estructura nested
-``hourly.*``, normaliza timestamps y escribe Parquet particionado por year/month.
+``hourly.*``, normaliza timestamps y escribe Parquet particionado por year/month
+en S3 (Medallion Architecture).
 
-Salida: ``silver.meteo_horario``
+Salida: ``silver.meteo_horario`` en S3
 
 Estructura Bronze esperada:
     data/raw/openmeteo/station_id=XXX/year=YYYY/openmeteo_XXX_YYYY.json
 
-Estructura Silver generada:
-    data/prep/silver/meteo_horario/year=YYYY/month=M/part-N.parquet
+Estructura Silver generada en S3:
+    s3://itam-analytics-antonio/air-sense-mx/silver/meteo_horario/
+        year=YYYY/month=M/part-N.snappy.parquet
 
 Uso:
     python -m etl.silver openmeteo --help
@@ -35,7 +37,7 @@ from etl.silver.schemas import (
 from etl.silver.shared import (
     add_time_columns,
     load_dim_estaciones,
-    write_parquet,
+    write_s3_parquet,
 )
 from etl.silver.validations import (
     collect_quality_metrics,
@@ -183,7 +185,7 @@ def normalize_openmeteo(
 
 def run_openmeteo_silver(
     bronze_dir: Path,
-    silver_dir: Path,
+    s3_silver_path: str,
     dim_path: Path,
     start_year: int,
     end_year: int,
@@ -193,11 +195,13 @@ def run_openmeteo_silver(
     """Orquesta el pipeline Open-Meteo Bronze → Silver para un rango de años.
 
     Descubre recursivamente todos los JSON en bronze_dir filtrando por año
-    y opcionalmente por station_id, los procesa y escribe Parquet consolidado.
+    y opcionalmente por station_id, los procesa y escribe Parquet consolidado
+    en S3.
 
     Args:
         bronze_dir: Directorio raíz Bronze Open-Meteo (``data/raw/openmeteo/``).
-        silver_dir: Directorio raíz Silver (``data/prep/silver/meteo_horario/``).
+        s3_silver_path: Ruta S3 raíz del dataset Silver, e.g.
+            ``"s3://itam-analytics-antonio/air-sense-mx/silver/meteo_horario/"``.
         dim_path: Ruta a ``dim_estaciones.csv``.
         start_year: Primer año a procesar (inclusive).
         end_year: Último año a procesar (inclusive).
@@ -212,7 +216,7 @@ def run_openmeteo_silver(
         "Inicio pipeline Open-Meteo Silver",
         extra={
             "bronze_dir": str(bronze_dir),
-            "silver_dir": str(silver_dir),
+            "s3_silver_path": s3_silver_path,
             "start_year": start_year,
             "end_year": end_year,
             "station_id_filter": station_id_filter,
@@ -221,7 +225,6 @@ def run_openmeteo_silver(
     )
 
     dim_estaciones = load_dim_estaciones(dim_path)
-    output_dir = silver_dir
 
     # Descubrir archivos JSON por rango de años y estación
     all_files: list[Path] = []
@@ -283,7 +286,12 @@ def run_openmeteo_silver(
     df_all = pd.concat(frames, ignore_index=True)
     df_all = df_all.drop_duplicates(subset=METEO_PK, keep="first")
 
-    write_parquet(df_all, output_dir, METEO_PARTITION_COLS, context="meteo_horario")
+    write_s3_parquet(
+        df_all,
+        s3_silver_path,
+        METEO_PARTITION_COLS,
+        context="meteo_horario",
+    )
 
     elapsed = round(time.monotonic() - t0, 2)
     total_metrics["duration_seconds"] = elapsed  # type: ignore[assignment]
