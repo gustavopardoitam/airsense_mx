@@ -1,5 +1,4 @@
-"""
-Generador de fixture sintética para silver.observaciones_horarias y silver.meteo_horario.
+"""Fixture sintética para silver.observaciones_horarias y silver.meteo_horario.
 
 PROPÓSITO
 =========
@@ -33,9 +32,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from datetime import datetime
-from typing import Tuple
-
 
 # =============================================================================
 # CATÁLOGO DE ESTACIONES SINTÉTICAS (subset representativo de la dim real)
@@ -66,7 +62,13 @@ CONTINGENCIAS_PLANTADAS = [
     # Patrón ozono en zona NO (similar a contingencias documentadas)
     {"fecha": "2024-03-15", "hora_pico": 16, "zone": "NO", "cont": "O3", "pico": 155.0},
     # Patrón PM2.5 año nuevo (quema pirotécnica)
-    {"fecha": "2024-01-01", "hora_pico": 23, "zone": "SE", "cont": "PM25", "pico": 99.0},
+    {
+        "fecha": "2024-01-01",
+        "hora_pico": 23,
+        "zone": "SE",
+        "cont": "PM25",
+        "pico": 99.0,
+    },
 ]
 
 
@@ -74,9 +76,9 @@ CONTINGENCIAS_PLANTADAS = [
 # GENERADORES DE PATRONES BASE
 # =============================================================================
 
+
 def _diurnal_o3_pattern(hour: int) -> float:
-    """
-    Patrón fotoquímico típico de O3: bajo en la madrugada, sube con la radiación
+    """Patrón fotoquímico típico de O3: bajo en la madrugada, sube con la radiación
     solar, pico entre 14-16h, baja al anochecer.
     Devuelve un multiplicador entre 0.1 y 1.0.
     """
@@ -85,22 +87,20 @@ def _diurnal_o3_pattern(hour: int) -> float:
     sigma = 4
     base = 0.1
     peak = 1.0
-    return base + (peak - base) * np.exp(-((hour - peak_hour) ** 2) / (2 * sigma ** 2))
+    return base + (peak - base) * np.exp(-((hour - peak_hour) ** 2) / (2 * sigma**2))
 
 
 def _diurnal_pm_pattern(hour: int) -> float:
-    """
-    PM tiene doble pico: mañana (tráfico 7-9h) y noche (estabilidad atmosférica 20-23h).
+    """PM: doble pico mañana (tráfico 7-9h) y noche (estabilidad atmosférica 20-23h).
     """
     # Suma de dos gaussianas
-    morning = np.exp(-((hour - 8) ** 2) / (2 * 2 ** 2))
-    evening = np.exp(-((hour - 22) ** 2) / (2 * 3 ** 2))
+    morning = np.exp(-((hour - 8) ** 2) / (2 * 2**2))
+    evening = np.exp(-((hour - 22) ** 2) / (2 * 3**2))
     return 0.3 + 0.7 * max(morning, evening)
 
 
 def _seasonal_factor(date: pd.Timestamp, contaminant: str) -> float:
-    """
-    Factor estacional: O3 sube en primavera, PM sube en invierno.
+    """Factor estacional: O3 sube en primavera, PM sube en invierno.
     """
     month = date.month
     if contaminant == "O3":
@@ -109,7 +109,7 @@ def _seasonal_factor(date: pd.Timestamp, contaminant: str) -> float:
     elif contaminant in ("PM25", "PM10"):
         # Pico diciembre-febrero
         winter_distance = min(abs(month - 1), abs(month - 13))
-        return 0.5 + 0.5 * np.exp(-(winter_distance ** 2) / 4)
+        return 0.5 + 0.5 * np.exp(-(winter_distance**2) / 4)
     else:
         return 1.0
 
@@ -118,36 +118,38 @@ def _seasonal_factor(date: pd.Timestamp, contaminant: str) -> float:
 # GENERADOR PRINCIPAL DE OBSERVACIONES
 # =============================================================================
 
+
 def _generate_observations(
     start_date: str,
     end_date: str,
     rng: np.random.Generator,
 ) -> pd.DataFrame:
-    """
-    Genera el dataset de observaciones horarias con distribuciones plausibles
+    """Genera el dataset de observaciones horarias con distribuciones plausibles
     y eventos de contingencia plantados.
     """
-    timestamps = pd.date_range(start=start_date, end=end_date, freq="h", inclusive="left")
+    timestamps = pd.date_range(
+        start=start_date, end=end_date, freq="h", inclusive="left"
+    )
     records = []
 
     # Niveles base por contaminante (medianas plausibles en CDMX)
     base_levels = {
-        "O3":   35,   # ppb, sube con radiación
-        "NO2":  30,   # ppb
-        "SO2":   8,   # ppb
-        "PM10": 50,   # µg/m³
-        "PM25": 22,   # µg/m³
-        "CO":   0.8,  # ppm
+        "O3": 35,  # ppb, sube con radiación
+        "NO2": 30,  # ppb
+        "SO2": 8,  # ppb
+        "PM10": 50,  # µg/m³
+        "PM25": 22,  # µg/m³
+        "CO": 0.8,  # ppm
     }
 
     # Volatilidades (cuánto varía día a día)
     volatilities = {
-        "O3":   15,
-        "NO2":  12,
-        "SO2":   4,
+        "O3": 15,
+        "NO2": 12,
+        "SO2": 4,
         "PM10": 20,
         "PM25": 10,
-        "CO":   0.3,
+        "CO": 0.3,
     }
 
     for station_id, zone, lat, lon, muni in STATIONS_FIXTURE:
@@ -162,7 +164,9 @@ def _generate_observations(
             daily_levels[0] = base
             phi = 0.7  # autocorrelación día a día
             for i in range(1, n_days):
-                daily_levels[i] = phi * daily_levels[i-1] + (1 - phi) * base + daily_innovations[i]
+                daily_levels[i] = (
+                    phi * daily_levels[i - 1] + (1 - phi) * base + daily_innovations[i]
+                )
 
             for ts in timestamps:
                 day_idx = (ts.date() - pd.Timestamp(start_date).date()).days
@@ -190,16 +194,18 @@ def _generate_observations(
                 value = daily_level * hourly_factor * seasonal + noise
                 value = max(0.0, value)  # no hay concentraciones negativas
 
-                records.append({
-                    "timestamp": ts,
-                    "station_id": station_id,
-                    "zone": zone,
-                    "contaminante": cont,
-                    "valor": round(value, 2),
-                    "latitude": lat,
-                    "longitude": lon,
-                    "municipality": muni,
-                })
+                records.append(
+                    {
+                        "timestamp": ts,
+                        "station_id": station_id,
+                        "zone": zone,
+                        "contaminante": cont,
+                        "valor": round(value, 2),
+                        "latitude": lat,
+                        "longitude": lon,
+                        "municipality": muni,
+                    }
+                )
 
     df = pd.DataFrame.from_records(records)
 
@@ -220,7 +226,7 @@ def _generate_observations(
         for offset in range(-6, 7):
             target_ts = evt_date + pd.Timedelta(hours=evt_hora + offset)
             # Forma de campana alrededor del pico
-            decay = np.exp(-(offset ** 2) / 8)
+            decay = np.exp(-(offset**2) / 8)
             elevated = evt_pico * decay + base_levels[evt_cont] * (1 - decay)
 
             mask = (
@@ -244,15 +250,29 @@ def _generate_observations(
     df["ingestion_timestamp"] = pd.Timestamp.now()
 
     # Orden de columnas según contrato
-    return df[[
-        "timestamp", "station_id", "zone", "contaminante", "valor",
-        "latitude", "longitude", "municipality", "ingestion_timestamp"
-    ]].sort_values(["timestamp", "station_id", "contaminante"]).reset_index(drop=True)
+    return (
+        df[
+            [
+                "timestamp",
+                "station_id",
+                "zone",
+                "contaminante",
+                "valor",
+                "latitude",
+                "longitude",
+                "municipality",
+                "ingestion_timestamp",
+            ]
+        ]
+        .sort_values(["timestamp", "station_id", "contaminante"])
+        .reset_index(drop=True)
+    )
 
 
 # =============================================================================
 # GENERADOR DE METEOROLOGÍA
 # =============================================================================
+
 
 def _generate_meteo(
     start_date: str,
@@ -260,14 +280,15 @@ def _generate_meteo(
     rng: np.random.Generator,
     granularidad: str = "zone",  # "zone" o "station"
 ) -> pd.DataFrame:
-    """
-    Genera meteorología horaria coherente con la contaminación.
+    """Genera meteorología horaria coherente con la contaminación.
 
     Decisión: por defecto granularidad por ZONA (5 puntos), siguiendo la
     recomendación del equipo de hacer una llamada Open-Meteo por centroide
     zonal. Si Antonio decide otra cosa, se ajusta.
     """
-    timestamps = pd.date_range(start=start_date, end=end_date, freq="h", inclusive="left")
+    timestamps = pd.date_range(
+        start=start_date, end=end_date, freq="h", inclusive="left"
+    )
 
     if granularidad == "zone":
         # Centroides aproximados por zona (de la dim_estaciones real)
@@ -291,7 +312,7 @@ def _generate_meteo(
 
             # Temperatura: patrón diurno + estacional
             temp_base = 16 + 4 * np.sin(2 * np.pi * (doy - 80) / 365)  # estacional
-            temp_diurnal = 6 * np.sin(2 * np.pi * (hour - 8) / 24)     # diurno
+            temp_diurnal = 6 * np.sin(2 * np.pi * (hour - 8) / 24)  # diurno
             temp = temp_base + temp_diurnal + rng.normal(0, 1.5)
 
             # Humedad: inversa de temperatura
@@ -313,42 +334,54 @@ def _generate_meteo(
 
             # Radiación solar: cero de noche, máx al mediodía
             if 6 <= hour <= 18:
-                radiation = 800 * np.sin(np.pi * (hour - 6) / 12) * (1 - cloud_cover / 200)
+                radiation = (
+                    800 * np.sin(np.pi * (hour - 6) / 12) * (1 - cloud_cover / 200)
+                )
                 radiation = max(0, radiation + rng.normal(0, 50))
             else:
                 radiation = 0.0
 
             # Viento: bajo en madrugada, sube en tarde
-            wind_speed = max(0, 8 + 4 * np.sin(2 * np.pi * (hour - 6) / 24) + rng.normal(0, 2))
+            wind_speed = max(
+                0, 8 + 4 * np.sin(2 * np.pi * (hour - 6) / 24) + rng.normal(0, 2)
+            )
             wind_direction = rng.uniform(0, 360)
             wind_gusts = wind_speed * (1.3 + rng.random() * 0.4)
 
-            records.append({
-                "timestamp": ts,
-                id_col: punto_id,
-                "latitude_centroide": lat,
-                "longitude_centroide": lon,
-                "temp_2m": round(temp, 2),
-                "humidity_2m": round(humidity, 2),
-                "dewpoint_2m": round(dewpoint, 2),
-                "surface_pressure": round(surface_pressure, 2),
-                "precipitation": round(precipitation, 2),
-                "cloud_cover": round(cloud_cover, 2),
-                "shortwave_radiation": round(radiation, 2),
-                "wind_speed_10m": round(wind_speed, 2),
-                "wind_direction_10m": round(wind_direction, 2),
-                "wind_gusts_10m": round(wind_gusts, 2),
-            })
+            records.append(
+                {
+                    "timestamp": ts,
+                    id_col: punto_id,
+                    "latitude_centroide": lat,
+                    "longitude_centroide": lon,
+                    "temp_2m": round(temp, 2),
+                    "humidity_2m": round(humidity, 2),
+                    "dewpoint_2m": round(dewpoint, 2),
+                    "surface_pressure": round(surface_pressure, 2),
+                    "precipitation": round(precipitation, 2),
+                    "cloud_cover": round(cloud_cover, 2),
+                    "shortwave_radiation": round(radiation, 2),
+                    "wind_speed_10m": round(wind_speed, 2),
+                    "wind_direction_10m": round(wind_direction, 2),
+                    "wind_gusts_10m": round(wind_gusts, 2),
+                }
+            )
 
     df = pd.DataFrame.from_records(records)
     df["ingestion_timestamp"] = pd.Timestamp.now()
 
     # ~2% NULLs en meteo (más confiable que SIMAT)
-    null_mask = rng.random(len(df)) < 0.02
     meteo_vars = [
-        "temp_2m", "humidity_2m", "dewpoint_2m", "surface_pressure",
-        "precipitation", "cloud_cover", "shortwave_radiation",
-        "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m",
+        "temp_2m",
+        "humidity_2m",
+        "dewpoint_2m",
+        "surface_pressure",
+        "precipitation",
+        "cloud_cover",
+        "shortwave_radiation",
+        "wind_speed_10m",
+        "wind_direction_10m",
+        "wind_gusts_10m",
     ]
     for var in meteo_vars:
         var_nulls = rng.random(len(df)) < 0.02
@@ -361,14 +394,14 @@ def _generate_meteo(
 # API PÚBLICA
 # =============================================================================
 
+
 def generate_silver_fixtures(
     start_date: str = "2024-01-01",
     end_date: str = "2024-04-01",
     seed: int = 42,
     granularidad_meteo: str = "zone",
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Genera los DataFrames sintéticos de Silver para desarrollo de Gold.
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Genera los DataFrames sintéticos de Silver para desarrollo de Gold.
 
     Args:
         start_date: fecha inicial inclusiva (YYYY-MM-DD)
@@ -391,7 +424,6 @@ def generate_silver_fixtures(
 
 if __name__ == "__main__":
     # CLI: genera y guarda los fixtures
-    import sys
     from pathlib import Path
 
     output_dir = Path(__file__).parent
@@ -413,9 +445,14 @@ if __name__ == "__main__":
     print(f"Stations únicos en obs:   {obs['station_id'].nunique()}")
     print(f"Zonas únicas en obs:      {sorted(obs['zone'].unique())}")
     print(f"Contaminantes:            {sorted(obs['contaminante'].unique())}")
-    print(f"% nulls en valor:         {obs['valor'].isna().mean()*100:.2f}%")
-    print(f"Rango de timestamp:       {obs['timestamp'].min()} a {obs['timestamp'].max()}")
-    print(f"Stations únicos en meteo: {meteo.iloc[:, 1].nunique()} (col '{meteo.columns[1]}')")
+    print(f"% nulls en valor:         {obs['valor'].isna().mean() * 100:.2f}%")
+    print(
+        f"Rango de timestamp:       {obs['timestamp'].min()} a {obs['timestamp'].max()}"
+    )
+    print(
+        f"Stations únicos en meteo: {meteo.iloc[:, 1].nunique()}"
+        f" (col '{meteo.columns[1]}')"
+    )
 
     # Validación: los eventos plantados están elevados
     print("\n=== EVENTOS DE CONTINGENCIA PLANTADOS ===")
@@ -427,5 +464,7 @@ if __name__ == "__main__":
             & (obs["contaminante"] == evt["cont"])
         )
         valores = obs.loc[mask, "valor"].dropna()
-        print(f"  {evt['fecha']} {evt['hora_pico']:02d}:00 zona={evt['zone']} "
-              f"{evt['cont']} → esperado≈{evt['pico']}, valores={valores.tolist()}")
+        print(
+            f"  {evt['fecha']} {evt['hora_pico']:02d}:00 zona={evt['zone']} "
+            f"{evt['cont']} → esperado≈{evt['pico']}, valores={valores.tolist()}"
+        )

@@ -1,0 +1,52 @@
+station_id,station_name,station_name_full,zone,zone_full,municipality,state,latitude,longitude,altitude_masl,pollutants_measured,is_active,notes
+ACO,Acolman,Acolman — EdoMex,NE,Noreste,Acolman,Estado de México,19.6355,-98.9120,2198,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,Estación NE per Gaceta Oficial CDMX 28/05/2019; coords cat_estacion.csv SIMAT
+AJM,Ajusco Medio,Ajusco Medio — Tlalpan,SO,Suroeste,Tlalpan,Ciudad de México,19.2722,-99.2077,2548,O3;NO;NO2;NOx;CO;SO2;PM10;PM25,TRUE,Zona SO per simat-entornos.pdf Tabla 2
+AJU,Ajusco,Ajusco — Tlalpan (sitio de fondo),SO,Suroeste,Tlalpan,Ciudad de México,19.1543,-99.1626,2942,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,Sitio de fondo (background) en el bosque del Ajusco
+ATI,Atizapán,Atizapán de Zaragoza — EdoMex,NO,Noroeste,Atizapán de Zaragoza,Estado de México,19.5770,-99.2541,2341,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,
+BJU,Benito Juárez,Benito Juárez — CDMX,CE,Centro,Benito Juárez,Ciudad de México,19.3705,-99.1596,2249,O3;NO2;CO;SO2;PM10;PM25,TRUE,BJU original cerrada en 2005; reinstalada en azotea delegacional posteriormente
+CAM,Camarones,Camarones — Azcapotzalco,NO,Noroeste,Azcapotzalco,Ciudad de México,19.4684,-99.1698,2233,O3;NO;NO2;NOx;CO;SO2;PM10;PM25,TRUE,
+CCA,Centro de Ciencias de la Atmósfera,CCA — UNAM Coyoacán,SO,Suroeste,Coyoacán,Ciudad de México,19.3261,-99.1761,2294,O3;NO;NO2;NOx;CO;SO2;PM25,TRUE,Operada en convenio con UNAM (Centro de Ciencias de la Atmósfera)
+CHO,Chalco,Chalco — EdoMex,SE,Sureste,Chalco,Estado de México,19.2669,-98.8861,2253,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,
+CUA,Cuajimalpa,Cuajimalpa de Morelos — CDMX,SO,Suroeste,Cuajimalpa de Morelos,Ciudad de México,19.3654,-99.2912,2704,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,Coordenada en INECC (18.8128;-98.9553) es errónea; se usa la del cat_estacion.csv SIMAT que corresponde a Cuajimalpa CDMX
+CUT,Cuautitlán,Cuautitlán — EdoMex,NO,Noroeste,Cuautitlán Izcalli,Estado de México,19.7220,-99.1986,2280,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,
+FAC,FES Acatlán,FES-Acatlán — Naucalpan UNAM,NO,Noroeste,Naucalpan de Juárez,Estado de México,19.4823,-99.2433,2299,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,Operada en convenio con UNAM; sustituyó a EAC (ENEP Acatlán) histórica
+FAR,FES Aragón,FES-Aragón — Nezahualcóyotl/GAM,NE,Noreste,Nezahualcóyotl,Estado de México,19.4733,-99.0464,2240,O3;NO2;CO;SO2;PM25,TRUE,Operada en convenio con UNAM; municipio NEZ en EdoMex (campus FES Aragón); coords cat_estacion.csv
+GAM,Gustavo A. Madero,Gustavo A. Madero — CDMX,NE,Noreste,Gustavo A. Madero,Ciudad de México,19.4827,-99.0946,2244,O3;NO2;PM10;PM25,TRUE,Coordenadas confirmadas en SINAICA
+HGM,Hospital General de México,HGM — Cuauhtémoc,CE,Centro,Cuauhtémoc,Ciudad de México,19.4114,-99.1514,2234,O3;NO;NO2;NOx;CO;SO2;PM10;PM25,TRUE,
+INN,Investigaciones Nucleares,ININ — Ocoyoacac (sitio de fondo SO),SO,Suroeste,Ocoyoacac,Estado de México,19.2920,-99.3805,3082,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,Sitio de fondo operado en convenio con ININ
+IZT,Iztacalco,Iztacalco — CDMX,CE,Centro,Iztacalco,Ciudad de México,19.3844,-99.1176,2238,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,
+LLA,Los Laureles,Los Laureles — Ecatepec,NE,Noreste,Ecatepec de Morelos,Estado de México,19.5788,-99.0397,2230,O3;NO;NO2;NOx;CO;SO2,TRUE,No mide PM en esta estación según SINAICA
+LPR,La Presa,La Presa — Tlalnepantla,NE,Noreste,Tlalnepantla de Baz,Estado de México,19.5347,-99.1177,2302,O3;NO;NO2;NOx;CO;SO2,TRUE,NOTA: aunque la alcaldía/municipio Tlalnepantla está en zona NO según Gaceta esta estación específica se clasifica históricamente NE por su entorno (Ecatepec); confirmar con SEDEMA
+MER,Merced,Merced — Venustiano Carranza,CE,Centro,Venustiano Carranza,Ciudad de México,19.4246,-99.1196,2245,O3;NO;NO2;NOx;CO;SO2;PM10;PM25,TRUE,Estación de referencia histórica desde 1986
+MGH,Miguel Hidalgo,Miguel Hidalgo — CDMX,CE,Centro,Miguel Hidalgo,Ciudad de México,19.4041,-99.2027,2327,O3;NO;NO2;NOx;CO;SO2;PM10;PM25,TRUE,CONFLICTO: Gaceta Oficial 28/05/2019 ubica alcaldía MGH en NO; simat-entornos.pdf Tabla 2 clasifica estación MGH en CE. Se adoptó CE por clasificación operativa SIMAT; revisar
+MPA,Milpa Alta,Milpa Alta — CDMX,SE,Sureste,Milpa Alta,Ciudad de México,19.1769,-98.9902,2594,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,
+NEZ,Nezahualcóyotl,Nezahualcóyotl — EdoMex,NE,Noreste,Nezahualcóyotl,Estado de México,19.3937,-99.0282,2235,O3;NO;NO2;NOx;CO;SO2;PM10;PM25,TRUE,Tabla 2 simat-entornos.pdf la pone en NO; Gaceta y Tabla 3 REDMET la ubican en NE — se adopta NE
+PED,Pedregal,Pedregal — Álvaro Obregón,SO,Suroeste,Álvaro Obregón,Ciudad de México,19.3251,-99.2041,2326,O3;NO;NO2;NOx;CO;SO2;PM10;PM25,TRUE,Estación de referencia histórica; suele registrar excedencias máximas de ozono
+SAC,Santiago Acahualtepec,Santiago Acahualtepec — Iztapalapa,SE,Sureste,Iztapalapa,Ciudad de México,19.3450,-99.0090,2240,O3;NO;NO2;NOx;CO;SO2;PM25,TRUE,Algunas fuentes usan ACA; clave oficial SIMAT actual es SAC
+SAG,San Agustín,San Agustín — Ecatepec,NE,Noreste,Ecatepec de Morelos,Estado de México,19.5330,-99.0303,2241,O3;NO;NO2;NOx;CO;SO2;PM10;PM25,TRUE,
+SFE,Santa Fe,Santa Fe — Cuajimalpa,SO,Suroeste,Cuajimalpa de Morelos,Ciudad de México,19.3574,-99.2629,2599,O3;NO;NO2;NOx;CO;SO2;PM10;PM25,TRUE,
+TAH,Tláhuac,Tláhuac — CDMX,SE,Sureste,Tláhuac,Ciudad de México,19.2465,-99.0106,2297,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,
+TLA,Tlalnepantla,Tlalnepantla — EdoMex,NO,Noroeste,Tlalnepantla de Baz,Estado de México,19.5291,-99.2046,2311,O3;NO;NO2;NOx;CO;SO2;PM10;PM25,TRUE,Coordenada en INECC datos abiertos (20.6408;-103.3125) está errada — corresponde a Tlaquepaque Jalisco; se usa cat_estacion.csv SIMAT
+TLI,Tultitlán,Tultitlán — EdoMex,NO,Noroeste,Tultitlán,Estado de México,19.6025,-99.1772,2313,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,
+UAX,UAM Xochimilco,UAM-Xochimilco — Coyoacán/Xochimilco,SE,Sureste,Coyoacán,Ciudad de México,19.3044,-99.1036,2246,O3;NO;NO2;NOx;CO;SO2;PM25,TRUE,Operada en convenio con UAM-X
+UIZ,UAM Iztapalapa,UAM-Iztapalapa — Iztapalapa,SE,Sureste,Iztapalapa,Ciudad de México,19.3608,-99.0739,2221,O3;NO;NO2;NOx;CO;SO2;PM10;PM25,TRUE,Operada en convenio con UAM-I
+VIF,Villa de las Flores,Villa de las Flores — Coacalco,NE,Noreste,Coacalco de Berriozábal,Estado de México,19.6582,-99.0966,2242,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,
+XAL,Xalostoc,Xalostoc — Ecatepec,NE,Noreste,Ecatepec de Morelos,Estado de México,19.5260,-99.0824,2160,O3;NO;NO2;NOx;CO;SO2;PM10;PM25,TRUE,Estación de referencia histórica; suele registrar máximos de PM10
+MON,Montecillo,Montecillo — Texcoco,NE,Noreste,Texcoco,Estado de México,19.4604,-98.9029,2252,O3;NO;NO2;NOx;CO;SO2;PM10,TRUE,Texcoco en NE per Gaceta 28/05/2019
+PLA,Plateros,Plateros — Álvaro Obregón (desincorporada),SO,Suroeste,Álvaro Obregón,Ciudad de México,19.3659,-99.2001,2345,O3;NO2;CO;SO2,FALSE,Finalizó operación en 2010 per cat_estacion.csv; histórico de contingencias en años 90s la reportaba como SO
+EAC,ENEP Acatlán,ENEP Acatlán — Naucalpan (desincorporada),NO,Noroeste,Naucalpan de Juárez,Estado de México,,,,O3;NO2;CO;SO2,FALSE,Predecesor de FAC; aparece en contingencias 1990-2000; coordenadas no confirmadas en cat_estacion.csv (no listada)
+CES,Cerro de la Estrella,Cerro de la Estrella — Iztapalapa (desincorporada),SE,Sureste,Iztapalapa,Ciudad de México,19.3347,-99.0747,2219,O3;NO2;CO;SO2,FALSE,Finalizó operación en 2010
+TAX,Taxqueña,Taxqueña — Coyoacán (desincorporada),SO,Suroeste,Coyoacán,Ciudad de México,19.3357,-99.1232,2242,O3;NO2;CO;SO2,FALSE,Finalizó operación en 2010
+AZC,Azcapotzalco,Azcapotzalco — CDMX (desincorporada),NO,Noroeste,Azcapotzalco,Ciudad de México,19.4877,-99.1987,2279,O3;NO2;CO;SO2,FALSE,Finalizó operación en 2010
+TAC,Tacuba,Tacuba — Miguel Hidalgo (desincorporada),NO,Noroeste,Miguel Hidalgo,Ciudad de México,19.4539,-99.2025,2275,O3;NO2;CO;SO2,FALSE,Finalizó operación en 2010; Miguel Hidalgo en NO per Gaceta
+LAG,Lagunilla,Lagunilla — Cuauhtémoc (desincorporada),CE,Centro,Cuauhtémoc,Ciudad de México,19.4424,-99.1352,2223,O3;NO2;CO;SO2,FALSE,Finalizó operación en 2010
+LVI,La Villa,La Villa — GAM (desincorporada),NE,Noreste,Gustavo A. Madero,Ciudad de México,19.4679,-99.1177,2228,O3;NO2;CO;SO2,FALSE,Finalizó operación en 2010
+ARA,Aragón,Aragón — GAM/Bosque de Aragón (desincorporada),NE,Noreste,Gustavo A. Madero,Ciudad de México,19.4702,-99.0745,2200,O3;NO2;CO;SO2,FALSE,Finalizó operación en 2010
+VAL,Vallejo,Vallejo — Azcapotzalco (desincorporada),NO,Noroeste,Azcapotzalco,Ciudad de México,19.5224,-99.1657,2248,O3;NO2;CO;SO2,FALSE,Finalizó operación en 2010
+MIN,Metro Insurgentes,Metro Insurgentes — Cuauhtémoc (desincorporada),CE,Centro,Cuauhtémoc,Ciudad de México,19.4214,-99.1629,2231,CO,FALSE,Finalizó operación en 2007; medía sólo CO
+IMP,Instituto Mexicano del Petróleo,IMP — GAM (desincorporada),NE,Noreste,Gustavo A. Madero,Ciudad de México,19.4876,-99.1473,2250,O3;NO2;CO;SO2,FALSE,Finalizó operación en 2010
+HAN,Hangares,Hangares — V. Carranza/AICM (desincorporada),CE,Centro,Venustiano Carranza,Ciudad de México,,,,CO;SO2,FALSE,Operó cerca del AICM hasta los 90s; coordenadas no disponibles en cat_estacion.csv
+PER,La Perla,La Perla — Nezahualcóyotl (desincorporada),NE,Noreste,Nezahualcóyotl,Estado de México,19.3829,-98.9919,2237,O3;NO2;CO;SO2,FALSE,Finalizó operación en 2011
+CFE,Museo Tecnológico CFE,Museo Tecnológico CFE — Miguel Hidalgo (desincorporada),CE,Centro,Miguel Hidalgo,Ciudad de México,19.4144,-99.1943,2287,CO;SO2,FALSE,Finalizó operación en 1996; clasificación CE/NO por estar en MGH — se mantiene CE por proximidad histórica
+SUR,Santa Úrsula,Santa Úrsula — Coyoacán (desincorporada),SO,Suroeste,Coyoacán,Ciudad de México,19.3145,-99.1500,2279,O3;NO2;CO;SO2,FALSE,Aparece en estudios históricos pre-2010
+TPN,Tlalpan,Tlalpan — CDMX (desincorporada),SO,Suroeste,Tlalpan,Ciudad de México,19.2570,-99.1842,2522,O3;NO2;CO;SO2,FALSE,

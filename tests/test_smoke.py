@@ -35,7 +35,7 @@ def test_paths_config_from_repo_root() -> None:
 def test_contaminant_config_defaults() -> None:
     """Verifica que ContaminantConfig tiene valores por defecto válidos."""
     cfg = ContaminantConfig()
-    assert cfg.pm25_threshold_phase1 == 150.0
+    assert cfg.pm25_threshold_ugm3 == 79.0
     assert cfg.train_quantile_cutoff == 0.8
-    assert len(cfg.lags) == 4
-    assert len(cfg.rolls) == 2
+    assert len(cfg.lags_dias) == 4
+    assert len(cfg.rolls_dias) == 2

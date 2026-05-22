@@ -88,3 +88,9 @@ secrets.json
 
 .github/prompts/
 !.github/prompts/.gitkeep
+
+# Ignore data files by default
+data/*
+
+# Keep required catalogs
+!data/dim_estaciones.csv
