@@ -36,7 +36,14 @@ def build_features() -> None:
 
     TODO: Implementar
     """
-    logger.info("TODO: build_features()")
+    logger.info(
+        "Iniciando build_features",
+        extra={"stage": "features", "step": "build_features"},
+    )
+    logger.warning(
+        "TODO: build_features no implementado",
+        extra={"stage": "features"},
+    )
 
 
 def make_modeling_dataset() -> None:
@@ -46,7 +53,14 @@ def make_modeling_dataset() -> None:
 
     TODO: Implementar
     """
-    logger.info("TODO: make_modeling_dataset()")
+    logger.info(
+        "Iniciando make_modeling_dataset",
+        extra={"stage": "features", "step": "make_modeling_dataset"},
+    )
+    logger.warning(
+        "TODO: make_modeling_dataset no implementado",
+        extra={"stage": "features"},
+    )
 
 
 def temporal_split() -> None:
@@ -59,4 +73,11 @@ def temporal_split() -> None:
 
     TODO: Implementar
     """
-    logger.info("TODO: temporal_split()")
+    logger.info(
+        "Iniciando temporal_split",
+        extra={"stage": "features", "step": "temporal_split"},
+    )
+    logger.warning(
+        "TODO: temporal_split no implementado",
+        extra={"stage": "features"},
+    )

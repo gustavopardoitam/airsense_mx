@@ -182,7 +182,9 @@ def _extract_zip_url_from_html(html_text: str) -> str:
             "No se encontró URL de descarga ZIP en la respuesta del portal CDMX. "
             "El portal puede haber cambiado su estructura o el año no está disponible."
         )
-    return match.group(1)
+    zip_url = match.group(1)
+    logger.debug("URL ZIP extraída del HTML", extra={"zip_url": zip_url})
+    return zip_url
 
 
 def extract_all_from_zip(zip_bytes: bytes) -> dict[str, bytes]:
@@ -201,11 +203,16 @@ def extract_all_from_zip(zip_bytes: bytes) -> dict[str, bytes]:
         zipfile.BadZipFile: Si los bytes no corresponden a un ZIP válido.
     """
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
-        return {
+        result = {
             name: zf.read(name)
             for name in zf.namelist()
             if name.lower().endswith((".xls", ".xlsx"))
         }
+    logger.debug(
+        "ZIP extraído",
+        extra={"files": len(result), "names": sorted(result.keys())},
+    )
+    return result
 
 
 # ---------------------------------------------------------------------------

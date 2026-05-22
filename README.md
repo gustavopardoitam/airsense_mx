@@ -334,7 +334,7 @@ HOURLY_VARIABLES = [
 
 ```bash
 # 1. Clonar
-git clone https://github.com/airsense-mx/airsense_mx.git
+git clone https://github.com/gustavopardoitam/airsense_mx.git
 cd airsense_mx
 
 # 2. Instalar dependencias (determinísticas vía uv.lock)
@@ -514,6 +514,58 @@ uv run pytest --cov=etl --cov=utils --cov-report=html
 
 ---
 
+## Logging y Observabilidad
+
+Sistema centralizado (`utils/logging.py`) con **dual output** (stdout + archivo rotado) y contexto estructurado.
+
+### Configuración
+
+**Entry point (una sola vez):**
+
+```python
+from utils.logging import setup_logging
+
+setup_logging()  # Configura stdout + archivo rotado a medianoche
+```
+
+**En cada módulo:**
+
+```python
+from utils.logging import get_logger
+
+logger = get_logger(__name__)  # Variable de módulo
+logger.info("Evento", extra={"station_id": "BJU", "year": 2023})
+```
+
+### Niveles
+
+- `DEBUG` → URLs, parámetros (detalle técnico)
+- `INFO` → Milestones: inicio/fin, por-estación, estadísticas
+- `WARNING` → Degradación recuperable (retries, TODOs)
+- `ERROR` → Fallos con reintento posible
+- `CRITICAL` → Fallo irrecuperable
+
+### Archivos
+
+Rotan diariamente a medianoche; historial de 7 días:
+
+```
+logs/
+├── airsense.log           # actual
+├── airsense.log.2025-05-21
+├── airsense.log.2025-05-20
+└── ... (máx 7 archivos)
+```
+
+Lectura:
+
+```bash
+tail -f logs/airsense.log          # en vivo
+grep "station_id=BJU" logs/airsense.log  # filtrar
+```
+
+---
+
 ## Roadmap
 
 ### Fase 1: Bronze ✅ (En progreso)
@@ -579,9 +631,6 @@ Este proyecto fue desarrollado por **humanos**, con **IA asistiendo en tareas es
 | Lead Data Engineering | Antonio Esparza | Bronze/Silver, Streamlit, Bedrock, Deploy |
 | Lead Data Science | Gustavo Robledo | Features, LightGBM, SHAP, Evaluation |
 
-**Advisor:** Dr. [Profesor ITAM]
-
-**Institución:** Instituto Tecnológico Autónomo de México (ITAM)  
 **Programa:** Maestría en Data Science  
 **Proyecto Final:** Mayo 2026  
 
