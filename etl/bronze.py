@@ -17,11 +17,10 @@ Ejemplo de estructura de salida:
     - data/raw/subfolder/file2.csv → s3://.../air-sense-mx/bronze/subfolder/file2.csv
     - data/raw/a/b/c/file3.xlsx → s3://.../air-sense-mx/bronze/a/b/c/file3.xlsx
 
-Uso::
+Uso:
 
     uv run python -m etl.bronze --bucket itam-analytics-antonio
     uv run python -m etl.bronze --bucket itam-analytics-antonio --data-dir /ruta/custom
-    uv run python -m etl.bronze --bucket itam-analytics-antonio --dry-run
 
 Requisitos:
     boto3 — con permisos S3:PutObject.
