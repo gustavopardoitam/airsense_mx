@@ -482,6 +482,104 @@ s3://<your-bucket-name>/air-sense-mx/bronze/
 
 ---
 
+## Cómo Correr Silver ETL (Normalización)
+
+La capa Silver transforma datos Bronze (Excel RAMA/SIMAT + JSON Open-Meteo) en Parquet normalizado, con timestamps UTC-6 consistentes, tipos explícitos y validación de calidad.
+
+### Ejecutar Silver ETL (2021–2026)
+
+**1. RAMA/SIMAT (Excel → Long-format Parquet):**
+
+```bash
+python -m etl.silver rama --start-year 2021 --end-year 2026 --overwrite
+```
+
+**2. Open-Meteo (JSON → Tabular Parquet):**
+
+```bash
+python -m etl.silver openmeteo --start-year 2021 --end-year 2026 --overwrite
+```
+
+**Ambas en paralelo (recomendado):**
+
+```bash
+python -m etl.silver rama --start-year 2021 --end-year 2026 --overwrite && \
+python -m etl.silver openmeteo --start-year 2021 --end-year 2026 --overwrite
+```
+
+### Output Esperado
+
+```
+data/prep/silver/
+├── observaciones_horarias/          # RAMA/SIMAT limpio
+│   ├── year=2021/month=01/*.parquet
+│   ├── year=2021/month=02/*.parquet
+│   └── ... (year=2021 a year=2026)
+└── meteo_horario/                   # Open-Meteo normalizado
+    ├── year=2021/month=01/*.parquet
+    ├── year=2021/month=02/*.parquet
+    └── ... (year=2021 a year=2026)
+```
+
+### Parámetros Disponibles
+
+| Parámetro | Tipo | Default | Descripción |
+|---|---|---|---|
+| `--start-year` | int | 2021 | Primer año a procesar |
+| `--end-year` | int | 2026 | Último año (inclusive) |
+| `--bronze-dir` | Path | auto | Ruta datos Bronze |
+| `--silver-dir` | Path | auto | Ruta salida Silver |
+| `--dim-path` | Path | auto | Ruta `dim_estaciones.csv` |
+| `--station-id` | str | None | (Open-Meteo) Filtrar estación única |
+| `--overwrite` | flag | False | Sobrescribir si existe |
+
+### Ejemplo: Test Rápido (2023 solamente)
+
+```bash
+# Test rápido RAMA
+python -m etl.silver rama --start-year 2023 --end-year 2023 --overwrite
+
+# Test rápido Open-Meteo (una estación)
+python -m etl.silver openmeteo --start-year 2023 --end-year 2023 --station-id BJU --overwrite
+```
+
+### Verificar Output
+
+```bash
+# Listar archivos generados
+ls -lh data/prep/silver/observaciones_horarias/year=2021/month=01/
+ls -lh data/prep/silver/meteo_horario/year=2021/month=01/
+
+# Leer sample (primeras 5 filas)
+python -c "
+import pandas as pd
+df = pd.read_parquet('data/prep/silver/observaciones_horarias/year=2021/month=01/')
+print(f'Shape: {df.shape}')
+print(df.head())
+"
+```
+
+### Características Silver
+
+✅ Timestamps normalizados **UTC-6** (naive, sin DST)  
+✅ Valores faltantes **-99 → NULL**  
+✅ Tipos explícitos: `station_id` (string), `value` (Float64), `year` (int16)  
+✅ **Sin dtype object**: todos numéricos tipificados  
+✅ Particionado **year/month** (Hive-compatible Athena)  
+✅ Compression **Snappy** (PyArrow readable)  
+✅ **Validaciones** de rango, duplicados, estaciones válidas  
+✅ **Logging** estructurado con contexto (rows, estación, errores)  
+
+### Tiempo Estimado
+
+| Años | RAMA | Open-Meteo | Total |
+|---|---|---|---|
+| 2021-2026 (6 años) | 5-10 min | 2-5 min | ~7-15 min |
+| 2021-2023 (3 años) | 2-5 min | 1-2 min | ~3-7 min |
+| 2023 (test) | <1 min | <1 min | <2 min |
+
+---
+
 ## Testing
 
 ### Unit Tests (sin I/O real)
