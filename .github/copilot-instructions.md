@@ -19,14 +19,14 @@
 
 ## Scope
 
-**Antonio (SCOPE):**
+**Antonio:**
 - Bronze: SIMAT + Open-Meteo → JSON/Parquet (5 zonas, 5 años)
 - Silver: Normalizar timestamps (UTC-6), long format, validar
 - Streamlit: 3+ tabs (dashboard, forecast, contingencias)
 - Bedrock: NLP explicaciones
 - Deployment: EC2 t3.small
 
-**Gustavo (NO COPILOT):**
+**Gustavo:**
 - Features + training
 - LightGBM + SHAP
 - Gold batch predictions
