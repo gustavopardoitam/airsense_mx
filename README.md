@@ -3,6 +3,10 @@
 
 > Proyecto final Maestría Data Science ITAM | Mayo 2026 | 35% de la nota final
 
+**Autores:** José Antonio Esparza · Gustavo Pardo  
+**Repositorio:** https://github.com/gustavopardoitam/airsense_mx
+**App en producción:** 
+
 ---
 
 ## Descripción Ejecutiva
