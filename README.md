@@ -480,6 +480,72 @@ s3://<your-bucket-name>/air-sense-mx/bronze/
 └── ...
 ```
 
+### ⚠️ Troubleshooting: Error 404 en HeadObject
+
+**Síntoma:**
+```
+ERROR | Error subiendo data/raw/archivo.json: 
+An error occurred (404) when calling the HeadObject operation: Not Found
+```
+
+**Causas comunes:**
+
+1. **Bucket no existe o nombre incorrecto**
+   ```bash
+   aws s3 ls s3://<your-bucket-name>/
+   ```
+   - Si retorna "NoSuchBucket": crear bucket con `aws s3 mb s3://<your-bucket-name>`
+
+2. **Credenciales AWS inválidas o expiradas**
+   ```bash
+   aws sts get-caller-identity
+   ```
+   - Si falla: ejecutar `aws configure` y re-ingresar claves
+
+3. **Permisos insuficientes**
+   - Verificar que tu usuario IAM tiene:
+     - `s3:PutObject`
+     - `s3:GetObject`
+     - `s3:HeadObject`
+   - Ejemplo policy:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": ["s3:*"],
+         "Resource": ["arn:aws:s3:::your-bucket-name/*", "arn:aws:s3:::your-bucket-name"]
+       }
+     ]
+   }
+   ```
+
+4. **Bucket en región diferente**
+   - Verificar region del bucket:
+   ```bash
+   aws s3api get-bucket-location --bucket <your-bucket-name>
+   ```
+   - Configurar en `~/.aws/config` o con `--region` flag:
+   ```bash
+   uv run python -m etl.bronze --bucket <your-bucket-name> --region us-east-1
+   ```
+
+**Solución rápida (local first):**
+```bash
+# 1. Testear credenciales
+aws sts get-caller-identity
+
+# 2. Testear acceso a bucket
+aws s3 ls s3://<your-bucket-name>/
+
+# 3. Crear bucket si no existe
+aws s3 mb s3://<your-bucket-name> --region us-east-1
+
+# 4. Intentar subir nuevamente
+uv run python -m etl.bronze --bucket <your-bucket-name>
+```
+
 ---
 
 ## Cómo Correr Silver ETL (Normalización)
