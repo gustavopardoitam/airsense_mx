@@ -557,20 +557,20 @@ La capa Silver transforma datos Bronze (Excel RAMA/SIMAT + JSON Open-Meteo) en P
 **1. RAMA/SIMAT (Excel → Long-format Parquet):**
 
 ```bash
-python -m etl.silver rama --start-year 2021 --end-year 2026 --overwrite
+uv run python -m etl.silver rama --start-year 2021 --end-year 2026 --overwrite
 ```
 
 **2. Open-Meteo (JSON → Tabular Parquet):**
 
 ```bash
-python -m etl.silver openmeteo --start-year 2021 --end-year 2026 --overwrite
+uv run python -m etl.silver openmeteo --start-year 2021 --end-year 2026 --overwrite
 ```
 
 **Ambas en paralelo (recomendado):**
 
 ```bash
-python -m etl.silver rama --start-year 2021 --end-year 2026 --overwrite && \
-python -m etl.silver openmeteo --start-year 2021 --end-year 2026 --overwrite
+uv run python -m etl.silver rama --start-year 2021 --end-year 2026 --overwrite && \
+uv run python -m etl.silver openmeteo --start-year 2021 --end-year 2026 --overwrite
 ```
 
 ### Output Esperado
@@ -603,10 +603,10 @@ data/prep/silver/
 
 ```bash
 # Test rápido RAMA
-python -m etl.silver rama --start-year 2023 --end-year 2023 --overwrite
+uv run python -m etl.silver rama --start-year 2023 --end-year 2023 --overwrite
 
 # Test rápido Open-Meteo (una estación)
-python -m etl.silver openmeteo --start-year 2023 --end-year 2023 --station-id BJU --overwrite
+uv run python -m etl.silver openmeteo --start-year 2023 --end-year 2023 --station-id BJU --overwrite
 ```
 
 ### Verificar Output
