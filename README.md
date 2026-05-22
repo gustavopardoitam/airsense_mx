@@ -631,9 +631,6 @@ Este proyecto fue desarrollado por **humanos**, con **IA asistiendo en tareas es
 | Lead Data Engineering | Antonio Esparza | Bronze/Silver, Streamlit, Bedrock, Deploy |
 | Lead Data Science | Gustavo Robledo | Features, LightGBM, SHAP, Evaluation |
 
-**Advisor:** Dr. [Profesor ITAM]
-
-**Institución:** Instituto Tecnológico Autónomo de México (ITAM)  
 **Programa:** Maestría en Data Science  
 **Proyecto Final:** Mayo 2026  
 
