@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app", "etl", "training", "evaluation", "inference", "db", "utils"]
+
+[project]
+name = "airsense_mx"
+version = "0.1.0"
+description = "Sistema de alerta temprana de calidad del aire para la Ciudad de México"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    {name = "AirSense Team", email = "dev@airsense.mx"},
+]
+license = {text = "MIT"}
+dependencies = [
+    "pandas>=2.0.0",
+    "pyarrow>=13.0.0",
+    "numpy>=1.24.0",
+    "scikit-learn>=1.3.0",
+    "lightgbm>=4.0.0",
+    "xgboost>=2.0.0",
+    "streamlit>=1.28.0",
+    "plotly>=5.17.0",
+    "requests>=2.31.0",
+    "boto3>=1.28.0",
+    "awswrangler>=3.3.0",
+    "sqlalchemy>=2.0.0",
+    "psycopg[binary]>=3.1.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "joblib>=1.3.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.0",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+fix = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "C4", "UP", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["etl/test", "tests"]
+addopts = "--cov=. --cov-report=html --cov-report=term-missing"
+
+
