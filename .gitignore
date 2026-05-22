@@ -1,0 +1,87 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Data and artifacts
+data/raw/*
+data/prep/*
+data/inference/*
+artifacts/logs/*
+artifacts/models/*.pkl
+artifacts/models/*.joblib
+artifacts/predictions/*
+artifacts/reports/*
+!data/raw/.gitkeep
+!data/prep/.gitkeep
+!data/inference/.gitkeep
+!artifacts/logs/.gitkeep
+!artifacts/models/.gitkeep
+!artifacts/predictions/.gitkeep
+!artifacts/reports/.gitkeep
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# AWS
+.aws/credentials
+.aws/config
+
+# Secrets
+*.key
+*.pem
+secrets.json
