@@ -4,7 +4,7 @@
 > Proyecto final Maestría Data Science ITAM | Mayo 2026 | 35% de la nota final
 
 **Autores:** José Antonio Esparza · Gustavo Pardo  
-**Repositorio:** https://github.com/gustavopardoitam/airsense_mxc
+**Repositorio:** https://github.com/gustavopardoitam/airsense_mx
 **App en producción:** 
 
 ---
@@ -69,7 +69,7 @@ La contaminación atmosférica en la ZMVM causa ~13,000 muertes prematuras anual
 │ SILVER                                                    │
 │ (Normalizado, timestamps UTC-6, long format)             │
 │ s3://airsense-mx/silver/                                 │
-│ ├─ contaminantes_horario/ (O3, PM2.5, PM10, NO2, SO2, CO)│
+│ ├─ contaminantes_horario/ (O3, PM2.5, PM10, NO2, SO2)    │
 │ └─ meteo_horario/ (temp, humedad, presión, viento, etc) │
 └────────────────────────┬─────────────────────────────────┘
                          │
@@ -215,7 +215,7 @@ contaminantes_horario (Silver)
 ├── station_id: string (PK)
 ├── timestamp: timestamp (PK, UTC-6)
 ├── zone: string
-├── contaminante: enum(O3, PM2.5, PM10, NO2, SO2, CO)
+├── contaminante: enum(O3, PM2.5, PM10, NO2, SO2)
 ├── valor_ppb_o_ugm3: float
 ├── is_valid: boolean
 ├── metodo_medicion: string

@@ -1,7 +1,7 @@
 r"""Capa Bronze: ingesta de archivos Excel históricos RAMA/SIMAT.
 
 Descarga datos históricos de contaminantes atmosféricos (O3, PM25, PM10,
-NO2, SO2, CO) desde el portal oficial de calidad del aire de la CDMX
+NO2, SO2) desde el portal oficial de calidad del aire de la CDMX
 y los almacena como archivos crudos en la estructura Bronze del data lake.
 
 Decisiones de diseño:

@@ -7,7 +7,7 @@
 
 ## Contexto
 
-**Producto:** Predicción de contaminantes (O3, PM2.5, PM10, NO2, SO2, CO) próximos 1-7 días para ZMVM.
+**Producto:** Predicción de contaminantes (O3, PM2.5, PM10, NO2, SO2) próximos 1-7 días para ZMVM.
 
 **Datos:** SIMAT/RAMA (2015-2024), Open-Meteo (5 centroides x zona), PCAA (validación).
 
