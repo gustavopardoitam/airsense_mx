@@ -4,7 +4,7 @@
 > Proyecto final Maestría Data Science ITAM | Mayo 2026 | 35% de la nota final
 
 **Autores:** José Antonio Esparza · Gustavo Pardo  
-**Repositorio:** https://github.com/gustavopardoitam/airsense_mxc
+**Repositorio:** https://github.com/gustavopardoitam/airsense_mx
 **App en producción:** 
 
 ---
@@ -69,7 +69,7 @@ La contaminación atmosférica en la ZMVM causa ~13,000 muertes prematuras anual
 │ SILVER                                                    │
 │ (Normalizado, timestamps UTC-6, long format)             │
 │ s3://airsense-mx/silver/                                 │
-│ ├─ contaminantes_horario/ (O3, PM2.5, PM10, NO2, SO2, CO)│
+│ ├─ contaminantes_horario/ (O3, PM2.5, PM10, NO2, SO2)    │
 │ └─ meteo_horario/ (temp, humedad, presión, viento, etc) │
 └────────────────────────┬─────────────────────────────────┘
                          │
@@ -215,7 +215,7 @@ contaminantes_horario (Silver)
 ├── station_id: string (PK)
 ├── timestamp: timestamp (PK, UTC-6)
 ├── zone: string
-├── contaminante: enum(O3, PM2.5, PM10, NO2, SO2, CO)
+├── contaminante: enum(O3, PM2.5, PM10, NO2, SO2)
 ├── valor_ppb_o_ugm3: float
 ├── is_valid: boolean
 ├── metodo_medicion: string
@@ -442,6 +442,207 @@ data/raw/openmeteo/
   }
 }
 ```
+
+---
+
+## Cómo Subir a Bronze (AWS S3)
+
+**Requisitos:** Bucket S3, AWS credentials con permisos S3, archivos en `data/raw/`.
+
+**Nota:** Bronze es una capa **sin procesamiento** — copia exacta de los archivos originales de `data/raw/` a S3.
+
+**Ejecución:**
+
+```bash
+# Configura credenciales AWS
+aws configure
+
+# Copia archivos a S3 (sin transformación)
+uv run python -m etl.bronze --bucket <your-bucket-name>
+
+```
+
+**Output esperado:**
+
+```
+INFO | ✓ Subido: archivo1.json → s3://<your-bucket-name>/air-sense-mx/bronze/archivo1.json
+INFO | ✓ Subido: archivo2.csv → s3://<your-bucket-name>/air-sense-mx/bronze/archivo2.csv
+INFO | Archivos subidos    : 2
+INFO | Bytes totales       : 1500.50 (1.50 MB)
+```
+
+**Estructura en S3:**
+
+```
+s3://<your-bucket-name>/air-sense-mx/bronze/
+├── archivo1.json
+├── archivo2.csv
+└── ...
+```
+
+### ⚠️ Troubleshooting: Error 404 en HeadObject
+
+**Síntoma:**
+```
+ERROR | Error subiendo data/raw/archivo.json: 
+An error occurred (404) when calling the HeadObject operation: Not Found
+```
+
+**Causas comunes:**
+
+1. **Bucket no existe o nombre incorrecto**
+   ```bash
+   aws s3 ls s3://<your-bucket-name>/
+   ```
+   - Si retorna "NoSuchBucket": crear bucket con `aws s3 mb s3://<your-bucket-name>`
+
+2. **Credenciales AWS inválidas o expiradas**
+   ```bash
+   aws sts get-caller-identity
+   ```
+   - Si falla: ejecutar `aws configure` y re-ingresar claves
+
+3. **Permisos insuficientes**
+   - Verificar que tu usuario IAM tiene:
+     - `s3:PutObject`
+     - `s3:GetObject`
+     - `s3:HeadObject`
+   - Ejemplo policy:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": ["s3:*"],
+         "Resource": ["arn:aws:s3:::your-bucket-name/*", "arn:aws:s3:::your-bucket-name"]
+       }
+     ]
+   }
+   ```
+
+4. **Bucket en región diferente**
+   - Verificar region del bucket:
+   ```bash
+   aws s3api get-bucket-location --bucket <your-bucket-name>
+   ```
+   - Configurar en `~/.aws/config` o con `--region` flag:
+   ```bash
+   uv run python -m etl.bronze --bucket <your-bucket-name> --region us-east-1
+   ```
+
+**Solución rápida (local first):**
+```bash
+# 1. Testear credenciales
+aws sts get-caller-identity
+
+# 2. Testear acceso a bucket
+aws s3 ls s3://<your-bucket-name>/
+
+# 3. Crear bucket si no existe
+aws s3 mb s3://<your-bucket-name> --region us-east-1
+
+# 4. Intentar subir nuevamente
+uv run python -m etl.bronze --bucket <your-bucket-name>
+```
+
+---
+
+## Cómo Correr Silver ETL (Normalización)
+
+La capa Silver transforma datos Bronze (Excel RAMA/SIMAT + JSON Open-Meteo) en Parquet normalizado, con timestamps UTC-6 consistentes, tipos explícitos y validación de calidad.
+
+### Ejecutar Silver ETL (2021–2026)
+
+**1. RAMA/SIMAT (Excel → Long-format Parquet):**
+
+```bash
+uv run python -m etl.silver rama --start-year 2021 --end-year 2026 --overwrite
+```
+
+**2. Open-Meteo (JSON → Tabular Parquet):**
+
+```bash
+uv run python -m etl.silver openmeteo --start-year 2021 --end-year 2026 --overwrite
+```
+
+**Ambas en paralelo (recomendado):**
+
+```bash
+uv run python -m etl.silver rama --start-year 2021 --end-year 2026 --overwrite && \
+uv run python -m etl.silver openmeteo --start-year 2021 --end-year 2026 --overwrite
+```
+
+### Output Esperado
+
+```
+data/prep/silver/
+├── observaciones_horarias/          # RAMA/SIMAT limpio
+│   ├── year=2021/month=01/*.parquet
+│   ├── year=2021/month=02/*.parquet
+│   └── ... (year=2021 a year=2026)
+└── meteo_horario/                   # Open-Meteo normalizado
+    ├── year=2021/month=01/*.parquet
+    ├── year=2021/month=02/*.parquet
+    └── ... (year=2021 a year=2026)
+```
+
+### Parámetros Disponibles
+
+| Parámetro | Tipo | Default | Descripción |
+|---|---|---|---|
+| `--start-year` | int | 2021 | Primer año a procesar |
+| `--end-year` | int | 2026 | Último año (inclusive) |
+| `--bronze-dir` | Path | auto | Ruta datos Bronze |
+| `--silver-dir` | Path | auto | Ruta salida Silver |
+| `--dim-path` | Path | auto | Ruta `dim_estaciones.csv` |
+| `--station-id` | str | None | (Open-Meteo) Filtrar estación única |
+| `--overwrite` | flag | False | Sobrescribir si existe |
+
+### Ejemplo: Test Rápido (2023 solamente)
+
+```bash
+# Test rápido RAMA
+uv run python -m etl.silver rama --start-year 2023 --end-year 2023 --overwrite
+
+# Test rápido Open-Meteo (una estación)
+uv run python -m etl.silver openmeteo --start-year 2023 --end-year 2023 --station-id BJU --overwrite
+```
+
+### Verificar Output
+
+```bash
+# Listar archivos generados
+ls -lh data/prep/silver/observaciones_horarias/year=2021/month=01/
+ls -lh data/prep/silver/meteo_horario/year=2021/month=01/
+
+# Leer sample (primeras 5 filas)
+python -c "
+import pandas as pd
+df = pd.read_parquet('data/prep/silver/observaciones_horarias/year=2021/month=01/')
+print(f'Shape: {df.shape}')
+print(df.head())
+"
+```
+
+### Características Silver
+
+✅ Timestamps normalizados **UTC-6** (naive, sin DST)  
+✅ Valores faltantes **-99 → NULL**  
+✅ Tipos explícitos: `station_id` (string), `value` (Float64), `year` (int16)  
+✅ **Sin dtype object**: todos numéricos tipificados  
+✅ Particionado **year/month** (Hive-compatible Athena)  
+✅ Compression **Snappy** (PyArrow readable)  
+✅ **Validaciones** de rango, duplicados, estaciones válidas  
+✅ **Logging** estructurado con contexto (rows, estación, errores)  
+
+### Tiempo Estimado
+
+| Años | RAMA | Open-Meteo | Total |
+|---|---|---|---|
+| 2021-2026 (6 años) | 5-10 min | 2-5 min | ~7-15 min |
+| 2021-2023 (3 años) | 2-5 min | 1-2 min | ~3-7 min |
+| 2023 (test) | <1 min | <1 min | <2 min |
 
 ---
 

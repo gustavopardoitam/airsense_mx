@@ -26,7 +26,7 @@ Ambos consumen: `dim_estaciones` (tabla dimensional compartida)
 |---|---|
 | **Formato de archivo** | Parquet con compresión Snappy |
 | **Encoding de strings** | UTF-8 |
-| **Timezone de timestamps** | Hora local CDMX (UTC-6, sin DST). NO convertir a UTC. Razón: los umbrales del PCAA y las decisiones del usuario final operan en hora local. |
+| **Timezone de timestamps** | Hora local CDMX (UTC-6, sin DST). NO convertir a UTC. La columna canónica es `datetime_local` (timezone-naive). Ver §7.5 para reglas completas. |
 | **Representación de NULL** | NULL nativo de Parquet. NUNCA usar -99, NaN, "NULL", "", -1. |
 | **Particionado** | Hive-style: `year=YYYY/month=MM/` |
 | **Catálogo** | AWS Glue Data Catalog, bases `airsense_silver` y `airsense_gold` |
@@ -172,9 +172,45 @@ year=YYYY/month=MM/
 3. **Sin duplicados** — clave: `(timestamp, station_id)`.
 4. **Rangos plausibles** — alertar (no rechazar) si `temp_2m > 45` o `< -10`, `wind_speed_10m > 150`, `humidity_2m > 100`.
 
-### Variables que NO incluimos (decisión explícita)
+### 7.5. Regla crítica de timezone y timestamps
 
-Para acotar scope y reducir ruido en el modelo, **NO se ingieren** de Open-Meteo:
+**Toda la capa Silver preserva la temporalidad original en hora local CDMX.** Esta regla no es negociable.
+
+#### Columna canónica
+
+```python
+datetime_local  # datetime64[ns], timezone-naive, hora CDMX UTC-6
+```
+
+#### Reglas de implementación
+
+| Regla | ✅ Correcto | ❌ Prohibido |
+|-------|-----------|-------------|
+| Timezone | Naive (sin tzinfo) | `tz_localize()`, `tz_convert()` |
+| Offset | UTC-6 fijo | Offsets dinámicos verano/invierno |
+| DST | No aplicar | Nunca ajustar por horario de verano |
+| Sistema | Ignorar tz del OS | `datetime.now()` sin control de tz |
+| UTC | No usar | `tz_localize("UTC")` o conversiones a UTC |
+
+#### Razón de negocio
+
+Cambiar a UTC rompería:
+- Alineación temporal entre RAMA/SIMAT y Open-Meteo
+- Interpretación regulatoria (umbrales PCAA operan en hora local)
+- Joins horarios entre `observaciones_horarias` y `meteo_horario`
+- Comparabilidad con reportes oficiales SIMAT
+- Agregaciones temporales (picos diurnos, patrones de tráfico)
+
+#### Validación obligatoria antes de escribir Parquet
+
+```python
+assert df["datetime_local"].dt.tz is None, "datetime_local debe ser timezone-naive"
+assert df["hour"].between(0, 23).all(), "hora debe estar en rango [0, 23]"
+```
+
+---
+
+### 7.6. Variables que NO se ingieren de Open-Meteo
 - `snow*`, `weather_code`, `apparent_temperature`
 - `cloud_cover_low/mid/high` (basta con `cloud_cover` total)
 - `soil_temperature_*` y `soil_moisture_*` a profundidades
