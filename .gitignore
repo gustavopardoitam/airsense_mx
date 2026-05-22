@@ -85,3 +85,6 @@ docker-compose.override.yml
 *.key
 *.pem
 secrets.json
+
+.github/prompts/
+!.github/prompts/.gitkeep
