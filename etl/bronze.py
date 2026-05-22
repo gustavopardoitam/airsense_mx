@@ -34,6 +34,7 @@ import time
 from pathlib import Path
 
 import boto3
+from botocore.exceptions import ClientError
 
 from utils.logging import get_logger, setup_logging
 
@@ -93,8 +94,12 @@ def upload_files_to_s3(
                 )
                 stats["skipped"] += 1
                 continue
-            except s3_client.exceptions.NoSuchKey:
-                pass  # No existe, seguir con la subida
+            except ClientError as e:
+                # Verifica si es 404 (objeto no existe)
+                if e.response["Error"]["Code"] != "404":
+                    # Es otro error, re-lanzar
+                    raise
+                # Si es 404, continuar con la subida
 
             if dry_run:
                 logger.info(
