@@ -1,18 +1,26 @@
 """Capa Bronze: Copia archivos crudos de data/raw/ a AWS S3.
 
 Automatiza la subida de todos los archivos de contaminantes y meteorología
-desde `data/raw/` al bucket S3 especificado, preservando estructura y formato.
+desde `data/raw/` (incluyendo subcarpetas) al bucket S3 especificado, 
+preservando estructura y formato.
 
 Características:
-    - Descubre automáticamente archivos en `data/raw/`
+    - Descubre automáticamente **todos** los archivos en `data/raw/` (recursivo)
+    - Preserva estructura de carpetas anidadas en S3
     - Sube directamente a S3 (sin conversión)
-    - Estructura en S3: `s3://bucket/forecasting/bronze/`
+    - Estructura en S3: `s3://itam-analytics-antonio/air-sense-mx/bronze/`
     - Idempotente: verifica existencia antes de sobrescribir
     - Logs con cifras de control: archivos procesados, bytes, tiempo
 
+Ejemplo de estructura de salida:
+    - data/raw/file1.json → s3://.../air-sense-mx/bronze/file1.json
+    - data/raw/subfolder/file2.csv → s3://.../air-sense-mx/bronze/subfolder/file2.csv
+    - data/raw/a/b/c/file3.xlsx → s3://.../air-sense-mx/bronze/a/b/c/file3.xlsx
+
 Uso::
 
-    uv run python -m etl.bronze --bucket itam-analytics-antonio [--data-dir <ruta>]
+    uv run python -m etl.bronze --bucket itam-analytics-antonio
+    uv run python -m etl.bronze --bucket itam-analytics-antonio --data-dir /ruta/custom
     uv run python -m etl.bronze --bucket itam-analytics-antonio --dry-run
 
 Requisitos:
@@ -39,7 +47,7 @@ S3_PREFIX: str = "air-sense-mx/bronze"
 def upload_files_to_s3(
     data_dir: Path, bucket: str, dry_run: bool = False
 ) -> dict[str, int]:
-    """Descubre archivos en data_dir y los sube a S3.
+    """Descubre archivos recursivamente en data_dir y los sube a S3.
 
     Args:
         data_dir: Ruta local al directorio de datos.
@@ -55,15 +63,15 @@ def upload_files_to_s3(
     s3_client = boto3.client("s3")
     stats = {"uploaded": 0, "skipped": 0, "failed": 0, "bytes": 0}
 
-    # Descubre archivos (todos los tipos)
-    archivos = sorted([f for f in data_dir.iterdir() if f.is_file()])
+    # Descubre archivos recursivamente (incluyendo subcarpetas)
+    archivos = sorted([f for f in data_dir.rglob("*") if f.is_file()])
 
     if not archivos:
         logger.warning("No hay archivos en %s", data_dir)
         return stats
 
     logger.info(
-        "Descubiertos %d archivo(s) en %s",
+        "Descubiertos %d archivo(s) en %s (recursivo)",
         len(archivos),
         data_dir,
         extra={"data_dir": str(data_dir), "files_count": len(archivos)},
@@ -71,7 +79,9 @@ def upload_files_to_s3(
 
     for file_path in archivos:
         try:
-            s3_key = f"{S3_PREFIX}/{file_path.name}"
+            # Mantiene la estructura de carpetas relativa
+            relative_path = file_path.relative_to(data_dir)
+            s3_key = f"{S3_PREFIX}/{relative_path}"
             file_size = file_path.stat().st_size
 
             # Verifica si existe en S3
@@ -79,8 +89,8 @@ def upload_files_to_s3(
                 s3_client.head_object(Bucket=bucket, Key=s3_key)
                 logger.info(
                     "Saltado (existe en S3): %s",
-                    file_path.name,
-                    extra={"file": file_path.name, "s3_key": s3_key},
+                    relative_path,
+                    extra={"file": str(relative_path), "s3_key": s3_key},
                 )
                 stats["skipped"] += 1
                 continue
@@ -90,7 +100,7 @@ def upload_files_to_s3(
             if dry_run:
                 logger.info(
                     "[DRY-RUN] Subiría: %s → s3://%s/%s (%d bytes)",
-                    file_path.name,
+                    relative_path,
                     bucket,
                     s3_key,
                     file_size,
@@ -102,12 +112,12 @@ def upload_files_to_s3(
                 s3_client.upload_file(str(file_path), bucket, s3_key)
                 logger.info(
                     "✓ Subido: %s → s3://%s/%s (%d bytes)",
-                    file_path.name,
+                    relative_path,
                     bucket,
                     s3_key,
                     file_size,
                     extra={
-                        "file": file_path.name,
+                        "file": str(relative_path),
                         "s3_key": s3_key,
                         "bytes": file_size,
                     },
@@ -118,9 +128,9 @@ def upload_files_to_s3(
         except Exception as exc:
             logger.error(
                 "Error subiendo %s: %s",
-                file_path.name,
+                file_path,
                 str(exc),
-                extra={"file": file_path.name, "error": str(exc)},
+                extra={"file": str(file_path), "error": str(exc)},
             )
             stats["failed"] += 1
 
