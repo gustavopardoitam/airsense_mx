@@ -1,26 +1,51 @@
 # AirSense MX — Copilot Instructions
 
 > Estándar operativo de ingeniería para el ciclo de vida completo del producto de datos.
-> Mantenido por el equipo de ingeniería. Última revisión: mayo 2026.
+> Proyecto final Maestría Data Science ITAM. Última revisión: mayo 2026.
 
 ---
 
 ## Contexto del proyecto
 
-AirSense MX es un sistema de alerta temprana de calidad del aire para la Ciudad de México. Integra datos de la red RAMA/SIMAT (O₃, SO₂, NOₓ, CO, PM10, PM2.5, H₂S), datos meteorológicos históricos de Open-Meteo y registros del Programa de Contingencias Ambientales Atmosféricas (PCAA).
+**Proyecto académico:** AirSense MX es el proyecto final de Antonio y Gustavo, Maestría Data Science ITAM. Vale 35% calificación. Presentación: mayo 24, 2026.
 
-El objetivo es predecir contaminantes atmosféricos, estimar el riesgo de contingencia ambiental y entregar visualizaciones y recomendaciones accionables a personas vulnerables y tomadores de decisión. La solución se despliega en AWS y se consume mediante Streamlit.
+**Producto:** Sistema de predicción calidad del aire para ZMVM. Usuario: persona que decide cada mañana si saca al hijo al parque, corre, suspende actividades. El sistema predice próximos 1-7 días, estima riesgo contingencia por zona, genera explicaciones en lenguaje natural via Bedrock (Claude Haiku).
+
+**Fuentes:** RAMA/SIMAT (O3, PM25, PM10, NO2, SO2, CO años 2015-2024), Open-Meteo (meteorología horaria), PCAA (golden set evaluación).
+
+**Normativa del profesor:**
+1. Producto de datos reproducible, automatizado — no análisis
+2. Código original del equipo. Copilot asiste pero Antonio lo defiende en presentación
+3. Declaración honesta del uso de IA
+4. NO copy-paste de código sin entender — Copilot explica decisiones técnicas
 
 <context>
-  <stack>Python 3.11+, uv, Ruff, pytest, pandas, pyarrow, scikit-learn, LightGBM/XGBoost, Streamlit, Docker, AWS S3/Glue/Athena/ECS Fargate/ECR/CloudFormation/Secrets Manager/CloudWatch</stack>
-  <architecture>Medallion: Bronze → Silver → Gold</architecture>
-  <deployment>AWS ECS Fargate + Streamlit</deployment>
-  <language>Español como idioma primario de la UI; inglés para código, comentarios técnicos y commits</language>
+  <stack>Python 3.11, uv, Ruff, pytest. Librerías: pandas, pyarrow, requests, boto3, awswrangler, lightgbm, streamlit. AWS: S3, Glue, Athena, SageMaker, EC2 t3.small, Bedrock. Docker.</stack>
+  <architecture>Medallion: Bronze (raw) to Silver (normalized) to Gold (predictions Gustavo)</architecture>
+  <deployment>Streamlit en EC2 t3.small (Free Tier) preferente o Fargate. SageMaker Studio para training.</deployment>
+  <timezone>UTC-6 CDMX sin DST de punta a punta. Nunca UTC salvo ADR explícito.</timezone>
+  <responsibility>Antonio: Bronze, Silver RAMA/meteo, Streamlit, Bedrock, deployment. Gustavo: Silver to Gold, features, training.</responsibility>
 </context>
 
 ---
 
-## 1. Filosofía de ingeniería
+## Alcance de Desarrollo
+
+**Antonio (SCOPE COPILOT):**
+- Bronze: Ingestión SIMAT/RAMA + Open-Meteo (5 zonas x 5 años)
+- Silver: normalización observaciones_horarias + meteo_horario
+- dim_estaciones.csv: dimensional
+- Streamlit: 3+ tabs, visualizaciones, recomendaciones
+- Bedrock Haiku: explicaciones NLP
+- Deployment: EC2 t3.small o Fargate
+- Arquitectura: documento + diagrama draw.io
+
+**Gustavo (FUERA SCOPE):**
+- Silver to Gold: feature engineering, rolling, lags
+- Training: LightGBM SageMaker, baseline
+- Evaluation: métricas PCAA
+- Batch: gold.predicciones_diarias
+- Modelo: versionado, SHAP
 
 Este proyecto está construido por ingenieros que piensan en productos, no solo en pipelines. Cada decisión de diseño debe poder justificarse con una de las siguientes frases: **"simplifica el mantenimiento"**, **"mejora la experiencia del usuario"** o **"reduce la deuda técnica**.
 
@@ -341,7 +366,8 @@ s3://airsense-bronze/
 
 ### Silver — Curated Layer
 
-- Timestamps normalizados a UTC en formato ISO 8601.
+Timestamps en hora local CDMX (UTC-6 fijo, sin DST), consistentes en toda la cadena. No convertir a UTC salvo que se documente explícitamente.
+
 - Formato **largo** (tidy data): una fila = una medición de un contaminante en una estación en un momento.
 - Valores inválidos tratados con política explícita: nulls para lecturas fuera de rango físico, flag `is_imputed` para interpolaciones.
 - Schema documentado en `data_contracts/silver/`.
