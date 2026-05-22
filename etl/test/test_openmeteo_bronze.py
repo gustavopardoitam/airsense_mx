@@ -10,7 +10,6 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pandas as pd
 import pytest
 import requests
 
@@ -22,7 +21,6 @@ from etl.openmeteo_bronze import (
     run_openmeteo_bronze_ingestion,
     save_raw_json,
 )
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -100,6 +98,7 @@ class TestBuildOpenMeteoUrl:
 
     def test_current_year_end_date_is_today(self) -> None:
         from datetime import date
+
         year = date.today().year
         _, params = build_openmeteo_url(19.37, -99.15, year)
         assert params["end_date"] == date.today().isoformat()
@@ -120,7 +119,9 @@ class TestBuildOpenMeteoUrl:
 class TestBuildOutputPath:
     def test_path_follows_partition_convention(self) -> None:
         path = build_output_path(Path("data/raw/openmeteo"), "BJU", 2023)
-        assert path == Path("data/raw/openmeteo/station_id=BJU/year=2023/openmeteo_BJU_2023.json")
+        assert path == Path(
+            "data/raw/openmeteo/station_id=BJU/year=2023/openmeteo_BJU_2023.json"
+        )
 
     def test_different_stations_produce_different_paths(self) -> None:
         p1 = build_output_path(Path("out"), "BJU", 2023)
@@ -148,7 +149,9 @@ class TestDownloadOpenMeteoYear:
 
         assert "_metadata" in result
 
-    def test_metadata_contains_station_id_and_year(self, sample_api_response: dict) -> None:
+    def test_metadata_contains_station_id_and_year(
+        self, sample_api_response: dict
+    ) -> None:
         mock_resp = MagicMock()
         mock_resp.json.return_value = sample_api_response
         mock_resp.raise_for_status.return_value = None
@@ -160,7 +163,9 @@ class TestDownloadOpenMeteoYear:
         assert result["_metadata"]["station_id"] == "BJU"
         assert result["_metadata"]["year"] == 2023
 
-    def test_metadata_contains_requested_coordinates_from_csv(self, sample_api_response: dict) -> None:
+    def test_metadata_contains_requested_coordinates_from_csv(
+        self, sample_api_response: dict
+    ) -> None:
         """Las coordenadas del CSV deben quedar en metadata como latitude_requested."""
         mock_resp = MagicMock()
         mock_resp.json.return_value = sample_api_response
@@ -173,10 +178,14 @@ class TestDownloadOpenMeteoYear:
         assert result["_metadata"]["latitude_requested"] == 19.3705
         assert result["_metadata"]["longitude_requested"] == -99.1596
 
-    def test_metadata_contains_actual_grid_coordinates(self, sample_api_response: dict) -> None:
+    def test_metadata_contains_actual_grid_coordinates(
+        self, sample_api_response: dict
+    ) -> None:
         """Las coordenadas reales del grid ECMWF deben quedar en latitude_actual."""
         mock_resp = MagicMock()
-        mock_resp.json.return_value = sample_api_response  # latitude=19.375, longitude=-99.125
+        mock_resp.json.return_value = (
+            sample_api_response  # latitude=19.375, longitude=-99.125
+        )
         mock_resp.raise_for_status.return_value = None
         mock_resp.url = "https://example.com"
 
@@ -184,7 +193,9 @@ class TestDownloadOpenMeteoYear:
             result = download_openmeteo_year("BJU", 19.3705, -99.1596, 2023)
 
         assert result["_metadata"]["latitude_actual"] == sample_api_response["latitude"]
-        assert result["_metadata"]["longitude_actual"] == sample_api_response["longitude"]
+        assert (
+            result["_metadata"]["longitude_actual"] == sample_api_response["longitude"]
+        )
 
     def test_original_payload_preserved(self, sample_api_response: dict) -> None:
         mock_resp = MagicMock()
@@ -277,7 +288,9 @@ class TestRunOpenMeteoBronzeIngestion:
 
         assert stats["skipped"] >= 1
 
-    def test_overwrite_flag_redownloads(self, stations_csv: Path, tmp_path: Path) -> None:
+    def test_overwrite_flag_redownloads(
+        self, stations_csv: Path, tmp_path: Path
+    ) -> None:
         """Con overwrite=True, archivos existentes deben descargarse de nuevo."""
         existing = build_output_path(tmp_path, "BJU", 2020)
         existing.parent.mkdir(parents=True, exist_ok=True)
@@ -298,7 +311,9 @@ class TestRunOpenMeteoBronzeIngestion:
         assert stats["downloaded"] == 2  # 2 estaciones activas
         assert stats["skipped"] == 0
 
-    def test_failed_station_does_not_abort(self, stations_csv: Path, tmp_path: Path) -> None:
+    def test_failed_station_does_not_abort(
+        self, stations_csv: Path, tmp_path: Path
+    ) -> None:
         """Un error en una estación no debe abortar el resto."""
         call_count = 0
 
@@ -309,7 +324,9 @@ class TestRunOpenMeteoBronzeIngestion:
                 raise requests.ConnectionError("simulado")
             return {"latitude": lat, "_metadata": {}}
 
-        with patch("etl.openmeteo_bronze.download_openmeteo_year", side_effect=failing_download):
+        with patch(
+            "etl.openmeteo_bronze.download_openmeteo_year", side_effect=failing_download
+        ):
             with patch("etl.openmeteo_bronze.save_raw_json"):
                 with patch("etl.openmeteo_bronze.time.sleep"):
                     stats = run_openmeteo_bronze_ingestion(
@@ -322,7 +339,9 @@ class TestRunOpenMeteoBronzeIngestion:
         assert stats["failed"] == 1
         assert stats["downloaded"] == 1
 
-    def test_returns_stats_dict_with_expected_keys(self, stations_csv: Path, tmp_path: Path) -> None:
+    def test_returns_stats_dict_with_expected_keys(
+        self, stations_csv: Path, tmp_path: Path
+    ) -> None:
         with patch("etl.openmeteo_bronze.download_openmeteo_year") as mock_dl:
             mock_dl.return_value = {"latitude": 19.37, "_metadata": {}}
             with patch("etl.openmeteo_bronze.save_raw_json"):

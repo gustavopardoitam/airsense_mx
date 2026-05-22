@@ -20,7 +20,6 @@ from etl.bronze_open_meteo import (
     wrap_with_metadata,
 )
 
-
 # ---------------------------------------------------------------------------
 # build_s3_key — pure function, no mocks needed
 # ---------------------------------------------------------------------------
@@ -33,7 +32,9 @@ class TestBuildS3Key:
 
     def test_all_zones_produce_distinct_keys(self) -> None:
         keys = [build_s3_key(z, 2020) for z in ZONE_CENTROIDS]
-        assert len(set(keys)) == len(ZONE_CENTROIDS), "Every zone must produce a unique key"
+        assert len(set(keys)) == len(ZONE_CENTROIDS), (
+            "Every zone must produce a unique key"
+        )
 
     def test_all_years_produce_distinct_keys(self) -> None:
         keys = [build_s3_key("CE", y) for y in range(2020, 2025)]
@@ -101,14 +102,18 @@ class TestS3KeyExists:
 
     def test_returns_false_on_404(self) -> None:
         s3 = MagicMock()
-        error = ClientError({"Error": {"Code": "404", "Message": "Not Found"}}, "HeadObject")
+        error = ClientError(
+            {"Error": {"Code": "404", "Message": "Not Found"}}, "HeadObject"
+        )
         s3.head_object.side_effect = error
         assert s3_key_exists(s3, "airsense-mx", "bronze/test.json") is False
 
     def test_reraises_non_404_errors(self) -> None:
         """403 (permission denied) should propagate — we must not silently skip."""
         s3 = MagicMock()
-        error = ClientError({"Error": {"Code": "403", "Message": "Forbidden"}}, "HeadObject")
+        error = ClientError(
+            {"Error": {"Code": "403", "Message": "Forbidden"}}, "HeadObject"
+        )
         s3.head_object.side_effect = error
         with pytest.raises(ClientError):
             s3_key_exists(s3, "airsense-mx", "bronze/test.json")
@@ -140,7 +145,9 @@ class TestIngestZoneYear:
 
     def test_returns_dry_run_without_uploading(self, fake_api_response: dict) -> None:
         s3 = MagicMock()
-        with patch("etl.bronze_open_meteo.fetch_open_meteo", return_value=fake_api_response):
+        with patch(
+            "etl.bronze_open_meteo.fetch_open_meteo", return_value=fake_api_response
+        ):
             result = ingest_zone_year(
                 s3, "NO", 19.54, -99.23, 2020, "airsense-mx", dry_run=True
             )
@@ -149,10 +156,14 @@ class TestIngestZoneYear:
 
     def test_uploads_when_key_missing(self, fake_api_response: dict) -> None:
         s3 = MagicMock()
-        error = ClientError({"Error": {"Code": "404", "Message": "Not Found"}}, "HeadObject")
+        error = ClientError(
+            {"Error": {"Code": "404", "Message": "Not Found"}}, "HeadObject"
+        )
         s3.head_object.side_effect = error  # key does not exist
 
-        with patch("etl.bronze_open_meteo.fetch_open_meteo", return_value=fake_api_response):
+        with patch(
+            "etl.bronze_open_meteo.fetch_open_meteo", return_value=fake_api_response
+        ):
             result = ingest_zone_year(s3, "NE", 19.48, -99.02, 2021, "airsense-mx")
 
         assert result == "uploaded"
@@ -161,14 +172,21 @@ class TestIngestZoneYear:
     def test_upload_key_matches_build_s3_key(self, fake_api_response: dict) -> None:
         """The key used in put_object must match what build_s3_key returns."""
         s3 = MagicMock()
-        error = ClientError({"Error": {"Code": "404", "Message": "Not Found"}}, "HeadObject")
+        error = ClientError(
+            {"Error": {"Code": "404", "Message": "Not Found"}}, "HeadObject"
+        )
         s3.head_object.side_effect = error
 
-        with patch("etl.bronze_open_meteo.fetch_open_meteo", return_value=fake_api_response):
+        with patch(
+            "etl.bronze_open_meteo.fetch_open_meteo", return_value=fake_api_response
+        ):
             ingest_zone_year(s3, "SO", 19.31, -99.18, 2022, "airsense-mx")
 
         call_kwargs = s3.put_object.call_args.kwargs
-        assert call_kwargs["Key"] == "bronze/open_meteo/zone=SO/year=2022/meteo_SO_2022.json"
+        assert (
+            call_kwargs["Key"]
+            == "bronze/open_meteo/zone=SO/year=2022/meteo_SO_2022.json"
+        )
         assert call_kwargs["Bucket"] == "airsense-mx"
 
     def test_uploaded_body_contains_metadata_key(self, fake_api_response: dict) -> None:
@@ -176,10 +194,14 @@ class TestIngestZoneYear:
         import json
 
         s3 = MagicMock()
-        error = ClientError({"Error": {"Code": "404", "Message": "Not Found"}}, "HeadObject")
+        error = ClientError(
+            {"Error": {"Code": "404", "Message": "Not Found"}}, "HeadObject"
+        )
         s3.head_object.side_effect = error
 
-        with patch("etl.bronze_open_meteo.fetch_open_meteo", return_value=fake_api_response):
+        with patch(
+            "etl.bronze_open_meteo.fetch_open_meteo", return_value=fake_api_response
+        ):
             ingest_zone_year(s3, "SE", 19.33, -98.99, 2020, "airsense-mx")
 
         body_bytes = s3.put_object.call_args.kwargs["Body"]

@@ -31,7 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import boto3
@@ -185,7 +185,9 @@ def fetch_open_meteo(zone: str, lat: float, lon: float, year: int) -> dict:
         "hourly": ",".join(HOURLY_VARIABLES),
         "timezone": "America/Mexico_City",
     }
-    resp = requests.get(OPEN_METEO_ARCHIVE_URL, params=params, timeout=REQUEST_TIMEOUT_SECONDS)
+    resp = requests.get(
+        OPEN_METEO_ARCHIVE_URL, params=params, timeout=REQUEST_TIMEOUT_SECONDS
+    )
     resp.raise_for_status()
     logger.info(
         "Open-Meteo response received",
@@ -211,7 +213,7 @@ def wrap_with_metadata(payload: dict, zone: str, year: int, source_url: str) -> 
     """
     return {
         "_metadata": {
-            "_ingested_at": datetime.now(timezone.utc).isoformat(),
+            "_ingested_at": datetime.now(UTC).isoformat(),
             "_source_url": source_url,
             "_zone": zone,
             "_year": year,
@@ -312,7 +314,12 @@ def main(
 
     logger.info(
         "Bronze Open-Meteo ingestion started",
-        extra={"zones": zones, "years": years, "total_requests": total, "dry_run": dry_run},
+        extra={
+            "zones": zones,
+            "years": years,
+            "total_requests": total,
+            "dry_run": dry_run,
+        },
     )
 
     s3_client = boto3.client("s3")
@@ -329,7 +336,11 @@ def main(
             except requests.HTTPError as exc:
                 logger.error(
                     "HTTP error — zone/year skipped",
-                    extra={"zone": zone, "year": year, "http_status": exc.response.status_code},
+                    extra={
+                        "zone": zone,
+                        "year": year,
+                        "http_status": exc.response.status_code,
+                    },
                 )
                 stats["failed"] += 1
             except requests.Timeout:
@@ -352,7 +363,8 @@ def main(
     if stats["failed"] > 0:
         raise SystemExit(
             f"{stats['failed']} zone-year(s) failed. "
-            "Check logs, fix the issue, and re-run — already uploaded files will be skipped."
+            "Check logs, fix the issue, and re-run "
+            "— already uploaded files will be skipped."
         )
 
 
@@ -363,7 +375,10 @@ def main(
 
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Bronze ingestion: Open-Meteo historical weather data for ZMVM zones."
+        description=(
+            "Bronze ingestion: Open-Meteo historical weather data "
+            "for ZMVM zones."
+        )
     )
     parser.add_argument(
         "--zones",
@@ -380,7 +395,10 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Call the API but do not write to S3. Useful for smoke-testing connectivity.",
+        help=(
+            "Call the API but do not write to S3. "
+            "Useful for smoke-testing connectivity."
+        ),
     )
     return parser
 

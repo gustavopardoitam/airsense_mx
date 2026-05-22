@@ -1,4 +1,4 @@
-"""Ingesta Bronze de datos meteorológicos históricos desde Open-Meteo.
+r"""Ingesta Bronze de datos meteorológicos históricos desde Open-Meteo.
 
 Descarga datos horarios por estación y año desde la Open-Meteo Historical
 Weather API y los guarda como JSON crudo en la estructura Bronze local.
@@ -226,7 +226,12 @@ def download_openmeteo_year(
         wait = RETRY_BACKOFF_SECONDS * attempt
         logger.warning(
             "Error en descarga, reintentando",
-            extra={"station_id": station_id, "year": year, "attempt": attempt, "wait_s": wait},
+            extra={
+                "station_id": station_id,
+                "year": year,
+                "attempt": attempt,
+                "wait_s": wait,
+            },
         )
         time.sleep(wait)
 
@@ -246,7 +251,12 @@ def build_output_path(output_dir: Path, station_id: str, year: int) -> Path:
     Returns:
         Ruta completa al archivo JSON de salida.
     """
-    return output_dir / f"station_id={station_id}" / f"year={year}" / f"openmeteo_{station_id}_{year}.json"
+    return (
+        output_dir
+        / f"station_id={station_id}"
+        / f"year={year}"
+        / f"openmeteo_{station_id}_{year}.json"
+    )
 
 
 def save_raw_json(path: Path, data: dict[str, Any]) -> None:
@@ -259,8 +269,12 @@ def save_raw_json(path: Path, data: dict[str, Any]) -> None:
         data: Datos a serializar.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    logger.debug("JSON guardado", extra={"path": str(path), "bytes": path.stat().st_size})
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+    )
+    logger.debug(
+        "JSON guardado", extra={"path": str(path), "bytes": path.stat().st_size}
+    )
 
 
 def run_openmeteo_bronze_ingestion(
@@ -270,7 +284,7 @@ def run_openmeteo_bronze_ingestion(
     end_year: int | None = None,
     overwrite: bool = False,
 ) -> dict[str, int]:
-    """Orquesta la descarga completa de datos Open-Meteo para todas las estaciones activas.
+    """Orquesta la descarga Open-Meteo para todas las estaciones activas.
 
     Para cada combinación (estación, año), verifica si el archivo ya existe y lo
     omite salvo que ``overwrite=True``.
@@ -320,7 +334,11 @@ def run_openmeteo_bronze_ingestion(
             if output_path.exists() and not overwrite:
                 logger.debug(
                     "Archivo existente, omitiendo",
-                    extra={"station_id": station_id, "year": year, "path": str(output_path)},
+                    extra={
+                        "station_id": station_id,
+                        "year": year,
+                        "path": str(output_path),
+                    },
                 )
                 stats["skipped"] += 1
                 continue
