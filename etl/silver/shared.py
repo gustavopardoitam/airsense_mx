@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import awswrangler as wr
 import pandas as pd
 
 from utils.logging import get_logger
@@ -123,5 +124,46 @@ def write_parquet(
     logger.info(
         "Parquet escrito",
         extra={"context": context, "rows": n_rows, "output_dir": str(output_dir)},
+    )
+    return n_rows
+
+
+def write_s3_parquet(
+    df: pd.DataFrame,
+    s3_path: str,
+    partition_cols: list[str],
+    context: str = "",
+) -> int:
+    """Escribe DataFrame a S3 como Parquet Snappy con particionamiento Hive.
+
+    Usa ``awswrangler.s3.to_parquet`` en modo ``overwrite_partitions``:
+    solo sobrescribe las particiones year/month presentes en el DataFrame,
+    dejando el resto intactas (procesamiento incremental idempotente).
+
+    Compatible con AWS Athena, Glue Data Catalog y DuckDB.
+
+    Args:
+        df: DataFrame a escribir (sin índice pandas).
+        s3_path: Ruta S3 raíz del dataset, e.g.
+            ``"s3://bucket/air-sense-mx/silver/observaciones_horarias/"``.
+        partition_cols: Columnas para particionamiento Hive (["year", "month"]).
+        context: Etiqueta para logging.
+
+    Returns:
+        Número de filas escritas.
+    """
+    wr.s3.to_parquet(
+        df=df,
+        path=s3_path,
+        dataset=True,
+        mode="overwrite_partitions",
+        partition_cols=partition_cols,
+        compression="snappy",
+        index=False,
+    )
+    n_rows = len(df)
+    logger.info(
+        "Parquet escrito en S3",
+        extra={"context": context, "rows": n_rows, "s3_path": s3_path},
     )
     return n_rows

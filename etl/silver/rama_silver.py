@@ -2,15 +2,16 @@
 
 Lee archivos Excel históricos de contaminantes, convierte de formato wide
 a long (tidy), limpia valores centinela (-99), normaliza timestamps a
-hora local CDMX y escribe Parquet particionado por year/month.
+hora local CDMX y escribe Parquet particionado por year/month en S3.
 
-Salida: ``silver.observaciones_horarias``
+Salida: ``silver.observaciones_horarias`` en S3 (Medallion Architecture)
 
 Estructura Bronze esperada:
     data/raw/rama/year=YYYY/YYYY{POLLUTANT}.xls
 
-Estructura Silver generada:
-    data/prep/silver/observaciones_horarias/year=YYYY/month=M/part-N.parquet
+Estructura Silver generada en S3:
+    s3://itam-analytics-antonio/air-sense-mx/silver/observaciones_horarias/
+        year=YYYY/month=M/part-N.snappy.parquet
 
 Uso:
     python -m etl.silver rama --help
@@ -37,7 +38,7 @@ from etl.silver.shared import (
     hora_to_datetime_local,
     load_dim_estaciones,
     replace_sentinel_nulls,
-    write_parquet,
+    write_s3_parquet,
 )
 from etl.silver.validations import (
     collect_quality_metrics,
@@ -233,7 +234,7 @@ def process_rama_file(
 
 def run_rama_silver(
     bronze_dir: Path,
-    silver_dir: Path,
+    s3_silver_path: str,
     dim_path: Path,
     start_year: int,
     end_year: int,
@@ -243,12 +244,12 @@ def run_rama_silver(
 
     Descubre automáticamente todos los archivos ``.xls`` en bronze_dir
     dentro del rango de años indicado, los procesa y consolida la salida
-    por año/mes antes de escribir Parquet.
+    por año/mes antes de escribir Parquet en S3.
 
     Args:
         bronze_dir: Directorio raíz Bronze RAMA (``data/raw/rama/``).
-        silver_dir: Directorio raíz Silver
-            (``data/prep/silver/observaciones_horarias/``).
+        s3_silver_path: Ruta S3 raíz del dataset Silver, e.g.
+            ``"s3://itam-analytics-antonio/air-sense-mx/silver/observaciones_horarias/"``.
         dim_path: Ruta a ``dim_estaciones.csv``.
         start_year: Primer año a procesar (inclusive).
         end_year: Último año a procesar (inclusive).
@@ -262,7 +263,7 @@ def run_rama_silver(
         "Inicio pipeline RAMA Silver",
         extra={
             "bronze_dir": str(bronze_dir),
-            "silver_dir": str(silver_dir),
+            "s3_silver_path": s3_silver_path,
             "start_year": start_year,
             "end_year": end_year,
             "overwrite": overwrite,
@@ -270,7 +271,6 @@ def run_rama_silver(
     )
 
     dim_estaciones = load_dim_estaciones(dim_path)
-    output_dir = silver_dir
 
     # Descubrir archivos por rango de años
     all_files: list[Path] = []
@@ -330,9 +330,9 @@ def run_rama_silver(
     df_all = pd.concat(frames, ignore_index=True)
     df_all = df_all.drop_duplicates(subset=OBSERVACIONES_PK, keep="first")
 
-    write_parquet(
+    write_s3_parquet(
         df_all,
-        output_dir,
+        s3_silver_path,
         OBSERVACIONES_PARTITION_COLS,
         context="observaciones_horarias",
     )

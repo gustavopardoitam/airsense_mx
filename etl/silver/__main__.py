@@ -1,7 +1,7 @@
-"""Entry point para ejecutar la capa Silver desde CLI.
+r"""Entry point para ejecutar la capa Silver desde CLI.
 
 Uso:
-    # Procesar RAMA todos los años disponibles
+    # Procesar RAMA todos los años disponibles (escribe en S3)
     python -m etl.silver rama --start-year 2021 --end-year 2024
 
     # Procesar Open-Meteo solo 2023
@@ -12,6 +12,10 @@ Uso:
 
     # Procesar solo una estación de Open-Meteo
     python -m etl.silver openmeteo --start-year 2023 --end-year 2023 --station-id BJU
+
+    # Sobreescribir ruta S3 de salida
+    python -m etl.silver rama --start-year 2023 \
+        --s3-path s3://mi-bucket/silver/observaciones_horarias/
 """
 
 from __future__ import annotations
@@ -21,7 +25,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from config import PathsConfig, find_repo_root
+from config import PathsConfig, S3Config, find_repo_root
 from etl.silver.openmeteo_silver import run_openmeteo_silver
 from etl.silver.rama_silver import run_rama_silver
 from utils.logging import get_logger, setup_logging
@@ -61,12 +65,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Directorio Bronze RAMA (default: data/raw/rama/)",
     )
     rama.add_argument(
-        "--silver-dir",
-        type=Path,
+        "--s3-path",
+        type=str,
         default=None,
         help=(
-            "Directorio Silver salida"
-            " (default: data/prep/silver/observaciones_horarias/)"
+            "Ruta S3 raíz para salida Silver "
+            "(default: s3://itam-analytics-antonio/air-sense-mx/silver/observaciones_horarias/)"
         ),
     )
     rama.add_argument(
@@ -108,10 +112,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Directorio Bronze Open-Meteo (default: data/raw/openmeteo/)",
     )
     meteo.add_argument(
-        "--silver-dir",
-        type=Path,
+        "--s3-path",
+        type=str,
         default=None,
-        help="Directorio Silver salida (default: data/prep/silver/meteo_horario/)",
+        help=(
+            "Ruta S3 raíz para salida Silver "
+            "(default: s3://itam-analytics-antonio/air-sense-mx/silver/meteo_horario/)"
+        ),
     )
     meteo.add_argument(
         "--dim-path",
@@ -136,18 +143,16 @@ def main() -> None:
 
     repo_root = find_repo_root(Path(__file__))
     paths = PathsConfig.from_repo_root(repo_root)
+    s3_cfg = S3Config()
 
     if args.source == "rama":
         bronze_dir = args.bronze_dir or paths.data_raw / "rama"
-        silver_dir = (
-            args.silver_dir
-            or paths.data_prep / "silver" / "observaciones_horarias"
-        )
+        s3_silver_path = args.s3_path or s3_cfg.silver_obs
         dim_path = args.dim_path or repo_root / "data" / "dim_estaciones.csv"
 
         metrics = run_rama_silver(
             bronze_dir=bronze_dir,
-            silver_dir=silver_dir,
+            s3_silver_path=s3_silver_path,
             dim_path=dim_path,
             start_year=args.start_year,
             end_year=args.end_year,
@@ -156,12 +161,12 @@ def main() -> None:
 
     elif args.source == "openmeteo":
         bronze_dir = args.bronze_dir or paths.data_raw / "openmeteo"
-        silver_dir = args.silver_dir or paths.data_prep / "silver" / "meteo_horario"
+        s3_silver_path = args.s3_path or s3_cfg.silver_meteo
         dim_path = args.dim_path or repo_root / "data" / "dim_estaciones.csv"
 
         metrics = run_openmeteo_silver(
             bronze_dir=bronze_dir,
-            silver_dir=silver_dir,
+            s3_silver_path=s3_silver_path,
             dim_path=dim_path,
             start_year=args.start_year,
             end_year=args.end_year,
