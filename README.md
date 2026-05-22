@@ -4,7 +4,7 @@
 > Proyecto final Maestría Data Science ITAM | Mayo 2026 | 35% de la nota final
 
 **Autores:** José Antonio Esparza · Gustavo Pardo  
-**Repositorio:** https://github.com/gustavopardoitam/airsense_mx
+**Repositorio:** https://github.com/gustavopardoitam/airsense_mxc
 **App en producción:** 
 
 ---
@@ -185,11 +185,17 @@ airsense_mx/
 
 **Ejecución:**
 ```bash
-# SIMAT (Excel wide format 2015-2024)
-python -m etl.bronze
+# RAMA/SIMAT (Excel histórico de contaminantes 2021-presente)
+uv run python -m etl.rama_bronze \
+  --output-dir data/raw/rama \
+  --start-year 2021 \
+  --pollutants O3 PM25 PM10 NO2 SO2 CO
 
-# Open-Meteo (JSON archive 2020-presente)
-python -m etl.openmeteo_bronze --stations-path data/dim_estaciones.csv
+# Open-Meteo (JSON meteorológico por estación 2021-presente)
+uv run python -m etl.openmeteo_bronze \
+  --stations-path data/dim_estaciones.csv \
+  --output-dir data/raw/openmeteo \
+  --start-year 2021
 ```
 
 ### Silver: Estructura → Semantics
@@ -234,7 +240,7 @@ contaminantes_horario (Silver)
 Open-Meteo provee datos meteorológicos horarios históricos (libre de costos, sin key):
 - Cobertura global, grilla ECMWF 9km (~40 km² por celda)
 - Variables: temperatura, humedad, presión, viento, radiación, precipitación
-- Laguna histórica: 2020-presente
+- Laguna histórica: 2021-presente
 - Complementa SIMAT (que mide contaminantes, no meteorología directa)
 
 ### Catálogo de Estaciones: `dim_estaciones.csv`
@@ -251,7 +257,7 @@ FES,19.3270,-99.1800,SO,TRUE,FES Acatlán,Cuajimalpa
 
 **Lógica:**
 1. Lee CSV, filtra `is_active = TRUE`
-2. Para cada estación + cada año (2020-2024):
+2. Para cada estación + cada año (2021-2026):
    - Extrae `latitude`, `longitude` del CSV
    - Construye llamada Open-Meteo: `https://archive-api.open-meteo.com/v1/archive?latitude=...&longitude=...&start_date=2023-01-01&end_date=2023-12-31&hourly=temperature_2m,humidity_2m,...`
    - Guarda respuesta JSON en: `data/raw/openmeteo/station_id=BJU/year=2023/openmeteo_BJU_2023.json`
@@ -362,7 +368,7 @@ Descarga datos meteorológicos de Open-Meteo para todas las estaciones activas:
 uv run python -m etl.openmeteo_bronze \
   --stations-path data/dim_estaciones.csv \
   --output-dir data/raw/openmeteo \
-  --start-year 2020
+  --start-year 2021
 ```
 
 **Flags opcionales:**
@@ -387,15 +393,15 @@ uv run python -m etl.openmeteo_bronze \
 ```
 data/raw/openmeteo/
 ├── station_id=BJU/
-│   ├── year=2020/
-│   │   └── openmeteo_BJU_2020.json      (~450 KB, 8760 filas)
 │   ├── year=2021/
-│   │   └── openmeteo_BJU_2021.json
+│   │   └── openmeteo_BJU_2021.json      (~450 KB, 8760 filas)
+│   ├── year=2022/
+│   │   └── openmeteo_BJU_2022.json
 │   └── year=2023/
 │       └── openmeteo_BJU_2023.json
 ├── station_id=XAL/
-│   ├── year=2020/
-│   │   └── openmeteo_XAL_2020.json
+│   ├── year=2021/
+│   │   └── openmeteo_XAL_2021.json
 │   └── ...
 └── ...
 ```
