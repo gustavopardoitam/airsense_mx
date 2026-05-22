@@ -22,6 +22,10 @@ DECISIONES DE DISEÑO
 - Estaciones: 10 representativas, 2 por zona. No son las 44 reales — es fixture.
 - Distribuciones: O3 con patrón diurno fotoquímico, PM con persistencia,
   meteo coherente con contaminación (alta T + bajo viento → picos O3).
+- METEO POR ESTACIÓN (no por zona). Acordado con Toño: cada station_id tiene
+  su propia serie meteorológica, joineable 1-a-1 con observaciones. Aunque
+  estaciones cercanas reciben valores muy similares (grilla ECMWF ~9km),
+  esto simplifica el contrato y mantiene el join 1-a-1 sin ambigüedad.
 - 3 eventos de contingencia plantados:
     * 2024-02-22 SO  O3 ≈ 167 ppb (replica el evento real)
     * 2024-03-15 NO  O3 ≈ 155 ppb (genérico)
@@ -365,7 +369,7 @@ def generate_silver_fixtures(
     start_date: str = "2024-01-01",
     end_date: str = "2024-04-01",
     seed: int = 42,
-    granularidad_meteo: str = "zone",
+    granularidad_meteo: str = "station",
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Genera los DataFrames sintéticos de Silver para desarrollo de Gold.
@@ -415,7 +419,9 @@ if __name__ == "__main__":
     print(f"Contaminantes:            {sorted(obs['contaminante'].unique())}")
     print(f"% nulls en valor:         {obs['valor'].isna().mean()*100:.2f}%")
     print(f"Rango de timestamp:       {obs['timestamp'].min()} a {obs['timestamp'].max()}")
-    print(f"Stations únicos en meteo: {meteo.iloc[:, 1].nunique()} (col '{meteo.columns[1]}')")
+    granularidad_col = "station_id" if "station_id" in meteo.columns else "zone"
+    print(f"Granularidad meteo:       por {granularidad_col}")
+    print(f"Puntos únicos en meteo:   {meteo[granularidad_col].nunique()}")
 
     # Validación: los eventos plantados están elevados
     print("\n=== EVENTOS DE CONTINGENCIA PLANTADOS ===")
@@ -429,3 +435,4 @@ if __name__ == "__main__":
         valores = obs.loc[mask, "valor"].dropna()
         print(f"  {evt['fecha']} {evt['hora_pico']:02d}:00 zona={evt['zone']} "
               f"{evt['cont']} → esperado≈{evt['pico']}, valores={valores.tolist()}")
+
