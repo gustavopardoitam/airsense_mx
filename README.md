@@ -458,15 +458,15 @@ data/raw/openmeteo/
 aws configure
 
 # Copia archivos a S3 (sin transformación)
-uv run python -m etl.bronze --bucket itam-analytics-antonio
-uv run python -m etl.bronze --bucket itam-analytics-antonio --dry-run
+uv run python -m etl.bronze --bucket <your-bucket-name>
+
 ```
 
 **Output esperado:**
 
 ```
-INFO | ✓ Subido: archivo1.json → s3://itam-analytics-antonio/air-sense-mx/bronze/archivo1.json
-INFO | ✓ Subido: archivo2.csv → s3://itam-analytics-antonio/air-sense-mx/bronze/archivo2.csv
+INFO | ✓ Subido: archivo1.json → s3://<your-bucket-name>/air-sense-mx/bronze/archivo1.json
+INFO | ✓ Subido: archivo2.csv → s3://<your-bucket-name>/air-sense-mx/bronze/archivo2.csv
 INFO | Archivos subidos    : 2
 INFO | Bytes totales       : 1500.50 (1.50 MB)
 ```
@@ -474,7 +474,7 @@ INFO | Bytes totales       : 1500.50 (1.50 MB)
 **Estructura en S3:**
 
 ```
-s3://itam-analytics-antonio/air-sense-mx/bronze/
+s3://<your-bucket-name>/air-sense-mx/bronze/
 ├── archivo1.json
 ├── archivo2.csv
 └── ...

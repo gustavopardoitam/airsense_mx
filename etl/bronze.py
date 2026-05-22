@@ -8,19 +8,19 @@ Características:
     - Descubre automáticamente **todos** los archivos en `data/raw/` (recursivo)
     - Preserva estructura de carpetas anidadas en S3
     - Sube directamente a S3 (sin conversión)
-    - Estructura en S3: `s3://itam-analytics-antonio/air-sense-mx/bronze/`
+    - Estructura en S3: `s3://<your-bucket-name>/air-sense-mx/bronze/`
     - Idempotente: verifica existencia antes de sobrescribir
     - Logs con cifras de control: archivos procesados, bytes, tiempo
 
 Ejemplo de estructura de salida:
-    - data/raw/file1.json → s3://.../air-sense-mx/bronze/file1.json
-    - data/raw/subfolder/file2.csv → s3://.../air-sense-mx/bronze/subfolder/file2.csv
-    - data/raw/a/b/c/file3.xlsx → s3://.../air-sense-mx/bronze/a/b/c/file3.xlsx
+    - data/raw/file1.json → s3://<your-bucket-name>/air-sense-mx/bronze/file1.json
+    - data/raw/subfolder/file2.csv → s3://<your-bucket-name>/air-sense-mx/bronze/subfolder/file2.csv
+    - data/raw/a/b/c/file3.xlsx → s3://<your-bucket-name>/air-sense-mx/bronze/a/b/c/file3.xlsx
 
 Uso:
 
-    uv run python -m etl.bronze --bucket itam-analytics-antonio
-    uv run python -m etl.bronze --bucket itam-analytics-antonio --data-dir /ruta/custom
+    uv run python -m etl.bronze --bucket <your-bucket-name>
+    uv run python -m etl.bronze --bucket <your-bucket-name> --data-dir /ruta/custom
 
 Requisitos:
     boto3 — con permisos S3:PutObject.
