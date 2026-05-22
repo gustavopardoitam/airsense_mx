@@ -47,7 +47,7 @@
 
 - **Type hints** en todas las funciones públicas
 - **`from __future__ import annotations`** en cada módulo
-- **Google docstrings** para funciones, clases, módulos públicos
+- **Google docstrings** para funciones, clases, módulos públicos — **siempre en español**
 - **`pathlib.Path`** no `os.path`
 - **Dataclasses congeladas** para config: `@dataclass(frozen=True)`
 - **joblib** para modelos, **awswrangler** para S3
