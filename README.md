@@ -623,6 +623,12 @@ Activaciones del Programa de Contingencias Ambientales Atmosféricas registradas
 
 ![Tabla de activaciones PCAA 2026 — Fase I y Fase II](docs/assets/pcaa_contingencias_2026.png)
 
+### Pantalla de la Aplicación — AirSense MX
+
+Vista de la aplicación Streamlit con el dashboard principal de calidad del aire para la ZMVM.
+
+![Pantalla AirSense MX — Streamlit Dashboard](docs/assets/Pantalla_AirSenseMX.png)
+
 ### Calidad de Código — Pylint 9.23/10
 
 Resultado del análisis estático de código con Pylint sobre los módulos Silver ETL (`etl/silver/`). Se identificaron únicamente advertencias menores de código duplicado (`R0801`) en bloques de logging estructurado compartidos entre `openmeteo_silver.py` y `rama_silver.py`.
