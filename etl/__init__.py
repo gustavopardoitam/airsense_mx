@@ -43,6 +43,11 @@ from etl.silver_to_gold import (
     agregar_labels,
     agregar_flags_calidad,
 )
+from etl.silver_adapter import (
+    adaptar_silver_completo,
+    adaptar_observaciones,
+    adaptar_meteo,
+)
 
 __all__ = [
     "construir_gold",
@@ -53,4 +58,19 @@ __all__ = [
     "agregar_calendario",
     "agregar_labels",
     "agregar_flags_calidad",
+]
+
+__all__ = [
+    "construir_gold",
+    "agregar_diario_obs",
+    "agregar_diario_meteo",
+    "construir_lags",
+    "construir_rolling",
+    "agregar_calendario",
+    "agregar_labels",
+    "agregar_flags_calidad",
+    # silver_adapter
+    "adaptar_silver_completo",
+    "adaptar_observaciones",
+    "adaptar_meteo",
 ]
