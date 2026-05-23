@@ -1,0 +1,64 @@
+{
+  "fecha_ejecucion": "2026-05-23T03:57:36.615471",
+  "modelos": {
+    "O3": {
+      "test_mae": 16.7161040114793,
+      "test_rmse": 21.232155776449485,
+      "baseline_mae": 21.54953510740622,
+      "mejora_pct": 22.429398461898845,
+      "paso_baseline": true,
+      "top_features": [
+        "dia_anio",
+        "radiation_total_day",
+        "mes",
+        "dia_semana",
+        "cloud_cover_avg_day",
+        "wind_speed_avg_1018h",
+        "wind_speed_avg_day",
+        "o3_roll_mean_30d",
+        "dewpoint_avg_day",
+        "o3_lag_1d"
+      ]
+    },
+    "PM25": {
+      "test_mae": 5.533688925234239,
+      "test_rmse": 8.044708361355429,
+      "baseline_mae": 7.695263613502135,
+      "mejora_pct": 28.089676934201314,
+      "paso_baseline": true,
+      "top_features": [
+        "dia_anio",
+        "wind_speed_avg_1018h",
+        "mes",
+        "humidity_avg_day",
+        "pm25_lag_1d",
+        "no2_max_1h",
+        "wind_speed_avg_day",
+        "radiation_total_day",
+        "dia_semana",
+        "surface_pressure_avg"
+      ]
+    },
+    "PM10": {
+      "test_mae": 9.179523672078203,
+      "test_rmse": 12.70871127519304,
+      "baseline_mae": 12.65448282656822,
+      "mejora_pct": 27.46030163472429,
+      "paso_baseline": true,
+      "top_features": [
+        "pm10_roll_mean_30d",
+        "pm10_lag_1d",
+        "mes",
+        "dia_semana",
+        "wind_speed_avg_1018h",
+        "no2_max_1h",
+        "dia_anio",
+        "humidity_avg_day",
+        "pm10_roll_mean_7d",
+        "surface_pressure_avg"
+      ]
+    }
+  },
+  "n_predicciones_test": 15300,
+  "n_eventos_golden_test": 4
+}
