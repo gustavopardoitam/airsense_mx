@@ -163,10 +163,19 @@ airsense_mx/
 ├── tests/
 │   ├── test_smoke.py                  # E2E mínimo
 │   └── __init__.py
+├── infra/
+│   ├── README.md                      # documentación infraestructura
+│   ├── core.yaml                      # CloudFormation template (EC2, ALB, S3, etc.)
+│   ├── parameters.example.yaml        # parámetros por ambiente (template)
+│   ├── deploy.sh                      # script de deployment
+│   ├── rollback.sh                    # script de rollback
+│   ├── Makefile                       # comandos útiles
+│   └── .gitignore                     # ignorar parameters.yaml, backups, etc.
 └── docs/
-    ├── architecture/                  # diagramas, ADRs
+    ├── arquitectura.md                # arquitectura del sistema (simplificada)
+    ├── arquitectura.drawio            # diagrama visual (5 capas, top-down)
     ├── datasets/                      # data contracts YAML
-    └── runbooks/                      # procedimientos operativos
+    └── datasets/
 ```
 
 ---
@@ -646,6 +655,73 @@ print(df.head())
 
 ---
 
+## Infraestructura AWS (CloudFormation)
+
+Desplegar AirSense MX a producción en AWS usando **Infrastructure as Code**.
+
+### Estructura IaC
+
+```
+infra/
+├── README.md                  # Documentación completa
+├── core.yaml                  # CloudFormation template (EC2, ALB, S3, Lambda, etc.)
+├── parameters.example.yaml    # Parámetros de configuración (template)
+├── deploy.sh                  # Script de deployment
+├── rollback.sh                # Script de rollback
+├── Makefile                   # Comandos útiles
+└── .gitignore                 # Proteger parámetros/secretos
+```
+
+### Quick Start
+
+**1. Preparar parámetros:**
+
+```bash
+cp infra/parameters.example.yaml infra/parameters.yaml
+# Editar con VPC ID, Subnet IDs, Key Pair, etc.
+```
+
+**2. Validar template:**
+
+```bash
+make -C infra validate
+```
+
+**3. Deploy:**
+
+```bash
+make -C infra deploy-prod  # Producción
+# o
+make -C infra deploy-dev   # Desarrollo
+```
+
+**4. Monitoreo:**
+
+```bash
+make -C infra status ENV=prod
+make -C infra logs         # CloudWatch Streamlit logs
+make -C infra events ENV=prod  # Stack events
+```
+
+### Recursos Creados
+
+| Recurso | Descripción | Costo |
+|---------|------------|-------|
+| **EC2 t3.small** | Streamlit app | $12/mes |
+| **ALB** | Load balancer | $7/mes |
+| **S3** | Data Lake (100 GB) | $2.30/mes |
+| **CloudWatch** | Logging 5 GB/mes | $2.50/mes |
+| **Lambda** | ETL batch (diario) | <$1/mes |
+| **Secrets Manager** | Credenciales | <$1/mes |
+| **Total estimado** | | **~$25/mes** |
+
+### Referencias
+
+- Documentación completa: [infra/README.md](./infra/README.md)
+- CloudFormation template: [infra/core.yaml](./infra/core.yaml)
+
+---
+
 ## Testing
 
 ### Unit Tests (sin I/O real)
@@ -791,17 +867,19 @@ grep "station_id=BJU" logs/airsense.log  # filtrar
 
 ### Fase 4: App + Deployment (2–3 semanas)
 
-- [ ] Dashboard Streamlit (3 tabs: monitoring, forecast, contingency)
-- [ ] Bedrock NLP (explicaciones para mortales)
-- [ ] Docker image + push ECR
-- [ ] Deploy EC2 t3.small + scheduled batch jobs (Glue)
+- [x] Dashboard Streamlit (3 tabs: monitoring, forecast, contingency) ✅
+- [x] Bedrock NLP (explicaciones para mortales) ✅
+- [x] Docker image + push ECR (preparado en core.yaml)
+- [x] CloudFormation IaC — EC2 t3.small, ALB, S3, Lambda, EventBridge ✅
+- [ ] Deploy a producción (requiere AWS account setup + Gustavo Gold)
+- [ ] Scheduled batch jobs (EventBridge cron 06:00 AM)
 
 ### Fase 5: Producción (Final)
 
-- [ ] CI/CD GitHub Actions
-- [ ] Data contracts YAML
-- [ ] Runbooks operacionales
-- [ ] ADRs (Architecture Decision Records)
+- [ ] CI/CD GitHub Actions (pre-deploy validation)
+- [ ] Data contracts YAML (Silver/Gold)
+- [ ] Monitoreo CloudWatch Alarms
+- [ ] Rollback procedures documentados
 - [ ] Documentación técnica completa
 
 ---

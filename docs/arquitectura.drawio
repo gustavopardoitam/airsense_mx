@@ -1,1 +1,153 @@
-<?xml version="1.0" encoding="UTF-8"?><mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="800" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/><!-- TÍTULO --><mxCell id="title" value="AirSense MX — Arquitectura Medallion (Simplificada)" style="text;html=1;align=center;fontStyle=1;fontSize=16;rounded=1;fillColor=#F0F0F0;" vertex="1" parent="1"><mxGeometry x="20" y="10" width="1360" height="35" as="geometry"/></mxCell><!-- ════════════════════════ CAPA 1: INGESTA ════════════════════════ --><!-- Contenedor capa 1 --><mxCell id="capa1-bg" value="1. INGESTA DE DATOS" style="shape=rect;rounded=1;fillColor=#FFEBEE;strokeColor=#C62828;strokeWidth=2;fontSize=11;fontStyle=1;align=left;" vertex="1" parent="1"><mxGeometry x="20" y="60" width="200" height="300" as="geometry"/></mxCell><!-- Nodos capa 1 --><mxCell id="simat-node" value="📊 SIMAT/RAMA&#xa;Excel (aire.cdmx.gob.mx)&#xa;O₃, PM2.5, PM10&#xa;NO₂, SO₂" style="rounded=1;fillColor=#FFCDD2;strokeColor=#C62828;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="85" width="90" height="70" as="geometry"/></mxCell><mxCell id="openmeteo-node" value="🌤️ Open-Meteo API&#xa;JSON horario&#xa;5 centroides ZMVM&#xa;Temp, Presión, Viento" style="rounded=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="120" y="85" width="90" height="70" as="geometry"/></mxCell><mxCell id="trigger-node" value="⏰ TRIGGER&#xa;Diario 06:00 AM&#xa;Cron/EventBridge" style="rounded=1;fillColor=#FFF9C4;strokeColor=#F57F17;fontSize=9;align=center;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="30" y="170" width="90" height="60" as="geometry"/></mxCell><mxCell id="dim-node" value="📋 dim_estaciones&#xa;CSV (Git)&#xa;5 zonas&#xa;Validación" style="rounded=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="120" y="170" width="90" height="60" as="geometry"/></mxCell><mxCell id="backup-node" value="💾 Backup Externo" style="rounded=1;fillColor=#F0F0F0;strokeColor=#999999;fontSize=8;dashed=1;" vertex="1" parent="1"><mxGeometry x="30" y="245" width="180" height="30" as="geometry"/></mxCell><!-- ════════════════════════ CAPA 2: ETL LOCAL ════════════════════════ --><!-- Contenedor capa 2 --><mxCell id="capa2-bg" value="2. ETL PIPELINE" style="shape=rect;rounded=1;fillColor=#DAE8FC;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;fontStyle=1;align=left;" vertex="1" parent="1"><mxGeometry x="240" y="60" width="180" height="300" as="geometry"/></mxCell><!-- Nodos capa 2 --><mxCell id="bronze-node" value="🟡 Bronze&#xa;Raw Data&#xa;Inmutable&#xa;etl/bronze.py" style="rounded=1;fillColor=#FFE0B2;strokeColor=#FF6F00;strokeWidth=2;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="250" y="85" width="80" height="65" as="geometry"/></mxCell><mxCell id="silver-node" value="🟢 Silver&#xa;Clean & Normalize&#xa;UTC-6 Naive&#xa;etl/silver.py" style="rounded=1;fillColor=#A5D6A7;strokeColor=#2E7D32;strokeWidth=2;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="340" y="85" width="80" height="65" as="geometry"/></mxCell><mxCell id="validation-node" value="✓ Validaciones&#xa;Schemas&#xa;Duplicados&#xa;Ranges" style="rounded=1;fillColor=#C8E6C9;strokeColor=#1B5E20;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="250" y="170" width="80" height="55" as="geometry"/></mxCell><mxCell id="partition-node" value="📂 Particiones&#xa;year/month&#xa;Hive Format" style="rounded=1;fillColor=#C8E6C9;strokeColor=#1B5E20;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="340" y="170" width="80" height="55" as="geometry"/></mxCell><mxCell id="etl-tech" value="Tech: pandas • PyArrow • awswrangler" style="rounded=1;fillColor=#F5F5F5;strokeColor=#999999;fontSize=7;align=center;" vertex="1" parent="1"><mxGeometry x="250" y="240" width="170" height="30" as="geometry"/></mxCell><!-- ════════════════════════ CAPA 3: DATA LAKE &amp; ML ════════════════════════ --><!-- Contenedor capa 3 --><mxCell id="capa3-bg" value="3. DATA LAKE + ML" style="shape=rect;rounded=1;fillColor=#E0F2F1;strokeColor=#00695C;strokeWidth=2;fontSize=11;fontStyle=1;align=left;" vertex="1" parent="1"><mxGeometry x="460" y="60" width="220" height="300" as="geometry"/></mxCell><!-- Nodos capa 3 --><mxCell id="s3-node" value="☁️ AWS S3 Data Lake&#xa;bronze/ | silver/ | gold/&#xa;Parquet + Snappy&#xa;s3://itam-analytics-antonio" style="rounded=1;fillColor=#80DEEA;strokeColor=#00695C;strokeWidth=2;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="470" y="85" width="100" height="75" as="geometry"/></mxCell><mxCell id="training-node" value="🧠 ML Training&#xa;LightGBM&#xa;Lags + Features&#xa;MAE/RMSE" style="rounded=1;fillColor=#FFE0B2;strokeColor=#E65100;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="580" y="85" width="90" height="70" as="geometry"/></mxCell><mxCell id="gold-node" value="⭐ Gold&#xa;Predicciones&#xa;1-7 días&#xa;P10/P90/Semáforo" style="rounded=1;fillColor=#FFF8E1;strokeColor=#F57F17;strokeWidth=2;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="470" y="175" width="100" height="70" as="geometry"/></mxCell><mxCell id="metrics-node" value="📊 Métricas&#xa;SHAP&#xa;Feature Importance" style="rounded=1;fillColor=#FFE0B2;strokeColor=#E65100;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="580" y="175" width="90" height="70" as="geometry"/></mxCell><mxCell id="ml-tech" value="Tech: LightGBM • SHAP • joblib" style="rounded=1;fillColor=#F5F5F5;strokeColor=#999999;fontSize=7;align=center;" vertex="1" parent="1"><mxGeometry x="470" y="260" width="200" height="25" as="geometry"/></mxCell><!-- ════════════════════════ CAPA 4: STREAMLIT APP ════════════════════════ --><!-- Contenedor capa 4 --><mxCell id="capa4-bg" value="4. STREAMLIT APP (EC2)" style="shape=rect;rounded=1;fillColor=#F3E5F5;strokeColor=#6A1B9A;strokeWidth=2;fontSize=11;fontStyle=1;align=left;" vertex="1" parent="1"><mxGeometry x="730" y="60" width="210" height="300" as="geometry"/></mxCell><!-- Nodos capa 4 --><mxCell id="streamlit-main" value="📱 Streamlit Main&#xa;@st.cache_data(ttl=5min)&#xa;Lee Gold S3" style="rounded=1;fillColor=#E1BEE7;strokeColor=#6A1B9A;strokeWidth=2;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="740" y="85" width="100" height="70" as="geometry"/></mxCell><mxCell id="dashboard-page" value="📊 Dashboard&#xa;Hoy por zona&#xa;Semáforo actual" style="rounded=1;fillColor=#F48FB1;strokeColor=#880E4F;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="850" y="85" width="80" height="50" as="geometry"/></mxCell><mxCell id="forecast-page" value="📈 Pronóstico&#xa;7 días&#xa;Plotly charts" style="rounded=1;fillColor=#F48FB1;strokeColor=#880E4F;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="850" y="145" width="80" height="50" as="geometry"/></mxCell><mxCell id="contingency-page" value="⚠️ Contingencias&#xa;Riesgo PCAA&#xa;Bedrock NLP" style="rounded=1;fillColor=#F48FB1;strokeColor=#880E4F;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="850" y="205" width="80" height="50" as="geometry"/></mxCell><mxCell id="app-tech" value="Tech: Streamlit • Plotly • boto3" style="rounded=1;fillColor=#F5F5F5;strokeColor=#999999;fontSize=7;align=center;" vertex="1" parent="1"><mxGeometry x="740" y="260" width="190" height="25" as="geometry"/></mxCell><!-- ════════════════════════ CAPA 5: AWS SERVICES &amp; USUARIOS ════════════════════════ --><!-- Contenedor capa 5 --><mxCell id="capa5-bg" value="5. AWS SERVICES + USUARIOS" style="shape=rect;rounded=1;fillColor=#FFF2CC;strokeColor=#d6b656;strokeWidth=2;fontSize=11;fontStyle=1;align=left;" vertex="1" parent="1"><mxGeometry x="990" y="60" width="370" height="300" as="geometry"/></mxCell><!-- AWS Servicios --><mxCell id="bedrock-node" value="🤖 Bedrock&#xa;Claude Haiku&#xa;NLP + Fallback" style="rounded=1;fillColor=#C8E6C9;strokeColor=#1B5E20;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="1000" y="85" width="80" height="60" as="geometry"/></mxCell><mxCell id="cloudwatch-node" value="📊 CloudWatch&#xa;Logs &amp; Metrics" style="rounded=1;fillColor=#B2EBF2;strokeColor=#006064;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="1090" y="85" width="80" height="60" as="geometry"/></mxCell><mxCell id="secrets-node" value="🔐 Secrets Manager&#xa;Credenciales" style="rounded=1;fillColor=#FFCCBC;strokeColor=#D84315;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="1180" y="85" width="80" height="60" as="geometry"/></mxCell><mxCell id="cfn-node" value="📐 CloudFormation&#xa;IaC" style="rounded=1;fillColor=#FFE0B2;strokeColor=#E65100;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="1270" y="85" width="80" height="60" as="geometry"/></mxCell><!-- Usuarios --><mxCell id="user1-node" value="👨‍🔬 Data Scientist&#xa;Monitoreo + Feedback" style="rounded=1;fillColor=#FFCCCC;strokeColor=#b85450;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="1000" y="170" width="90" height="60" as="geometry"/></mxCell><mxCell id="user2-node" value="👨‍💼 Operador ZMVM&#xa;Alertas" style="rounded=1;fillColor=#FFCCCC;strokeColor=#b85450;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="1100" y="170" width="90" height="60" as="geometry"/></mxCell><mxCell id="user3-node" value="📱 Ciudadano&#xa;Consulta pública" style="rounded=1;fillColor=#FFCCCC;strokeColor=#b85450;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="1200" y="170" width="90" height="60" as="geometry"/></mxCell><mxCell id="feedback-node" value="💬 Feedback Loop → Reentrenamiento" style="rounded=1;fillColor:#F5F5F5;strokeColor=#D84315;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="1000" y="250" width="270" height="30" as="geometry"/></mxCell><!-- ════════════════════════ FLECHAS: FLUJO PRINCIPAL ════════════════════════ --><!-- Ingesta → ETL --><mxCell id="f1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;endArrow=classic;" edge="1" source="simat-node" target="bronze-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="f2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;endArrow=classic;" edge="1" source="openmeteo-node" target="bronze-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="f3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;endArrow=classic;" edge="1" source="trigger-node" target="bronze-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="f4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;endArrow=classic;" edge="1" source="dim-node" target="silver-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><!-- ETL internos --><mxCell id="f5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;" edge="1" source="bronze-node" target="silver-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><!-- ETL → S3 --><mxCell id="f7" value="write Parquet" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;fontSize=8;" edge="1" source="silver-node" target="s3-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><!-- S3 → ML --><mxCell id="f8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;" edge="1" source="s3-node" target="training-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="f9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;" edge="1" source="training-node" target="gold-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><!-- ML → Streamlit --><mxCell id="f10" value="caché 5min" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;fontSize=8;" edge="1" source="gold-node" target="streamlit-main" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><!-- Streamlit → Pages --><mxCell id="f11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=1;" edge="1" source="streamlit-main" target="dashboard-page" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="f12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=1;" edge="1" source="streamlit-main" target="forecast-page" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="f13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=1;" edge="1" source="streamlit-main" target="contingency-page" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><!-- Bedrock ↔ Contingency --><mxCell id="f14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=1;dashed=1;" edge="1" source="contingency-page" target="bedrock-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><!-- Streamlit → Users --><mxCell id="f15" value="HTTP" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;fontSize=8;" edge="1" source="streamlit-main" target="user1-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="f16" value="HTTP" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;fontSize=8;" edge="1" source="forecast-page" target="user2-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="f17" value="HTTP" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;fontSize=8;" edge="1" source="contingency-page" target="user3-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><!-- Feedback loop --><mxCell id="f18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=1;dashed=1;strokeColor=#D84315;" edge="1" source="user1-node" target="feedback-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="f19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=1;dashed=1;strokeColor=#D84315;" edge="1" source="feedback-node" target="training-node" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell><!-- ════════════════════════ LEYENDA ════════════════════════ --><!-- LEYENDA --><mxCell id="legend-bg" value="" style="shape=rect;rounded=1;fillColor=#F5F5F5;strokeColor=#CCCCCC;fontSize=8;" vertex="1" parent="1"><mxGeometry x="20" y="385" width="1340" height="105" as="geometry"/></mxCell><mxCell id="legend" value="🔄 PIPELINE: SIMAT/Open-Meteo → Bronze (raw) → Silver (clean, UTC-6 naive, long format) → S3 (Parquet/Hive) → ML Training → Gold (predictions 1-7 días) → Streamlit (EC2)&#xa;⏰ BATCH: Diario 06:00 AM UTC-6 • Caché Streamlit 5 min • Sin RDS (todo S3) • Bedrock Claude Haiku (fallback)&#xa;👥 USUARIOS: Data Scientist (monitoreo), Operador ZMVM (alertas), Ciudadano (público) → Feedback → Reentrenamiento&#xa;🔧 TECH: Python 3.11 | pandas • PyArrow • awswrangler | LightGBM • SHAP | Streamlit • Plotly • Bedrock | CloudWatch • CloudFormation" style="text;html=1;align=left;fontSize=7;verticalAlign=top;wordWrap=1;" vertex="1" parent="1"><mxGeometry x="30" y="395" width="1320" height="85" as="geometry"/></mxCell></root></mxGraphModel>
+<?xml version="1.0" encoding="UTF-8"?>
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1020" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+
+    <!-- =========================================================
+         FUENTES DE DATOS
+    ========================================================== -->
+    <mxCell id="src1" value="SIMAT / RAMA&#xa;Excel anual (wide)&#xa;O3 · PM2.5 · PM10 · NO2 · SO2" style="rounded=1;whiteSpace=wrap;fillColor=#FFF3E0;strokeColor=#E65100;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="60" y="60" width="220" height="80" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="src2" value="Open-Meteo API&#xa;JSON horario&#xa;Temp · Presion · Viento · Radiacion" style="rounded=1;whiteSpace=wrap;fillColor=#FFF3E0;strokeColor=#E65100;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="320" y="60" width="220" height="80" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="src3" value="dim_estaciones.csv&#xa;Master data 5 zonas ZMVM&#xa;NO · NE · SE · SO · CE" style="rounded=1;whiteSpace=wrap;fillColor=#FFF3E0;strokeColor=#E65100;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="580" y="60" width="220" height="80" as="geometry"/>
+    </mxCell>
+
+    <!-- =========================================================
+         ETL PIPELINE (Bronze → Silver)
+    ========================================================== -->
+    <mxCell id="etl" value="ETL Pipeline&#xa;etl/silver/rama_silver.py · openmeteo_silver.py&#xa;Bronze (raw · inmutable) → Silver (UTC-6 · long format · -99 → NULL · Parquet+Snappy)" style="rounded=1;whiteSpace=wrap;fillColor=#E3F2FD;strokeColor=#1565C0;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="60" y="220" width="740" height="80" as="geometry"/>
+    </mxCell>
+
+    <!-- =========================================================
+         S3 DATA LAKE
+    ========================================================== -->
+    <mxCell id="lake" value="AWS S3 Data Lake&#xa;bronze/ · silver/ · gold/  —  Parquet + Snappy · Hive partitioning year/month&#xa;Athena + Glue Catalog" style="rounded=1;whiteSpace=wrap;fillColor=#E0F2F1;strokeColor=#00695C;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="60" y="380" width="740" height="80" as="geometry"/>
+    </mxCell>
+
+    <!-- =========================================================
+         ML PIPELINE (batch diario)
+    ========================================================== -->
+    <mxCell id="ml" value="ML Pipeline  —  batch diario 06:00 AM&#xa;Feature Engineering · LightGBM Training · SHAP · Inference&#xa;Gold: predicciones 1-7 dias · P10/P90 · prob_contingencia · Semaforo" style="rounded=1;whiteSpace=wrap;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="60" y="540" width="740" height="80" as="geometry"/>
+    </mxCell>
+
+    <!-- =========================================================
+         STREAMLIT APP
+    ========================================================== -->
+    <mxCell id="app" value="Streamlit App  —  EC2 t3.small&#xa;Dashboard · Pronostico 7 dias · Contingencias PCAA&#xa;Amazon Bedrock Claude Haiku (NLP) · cache 5 min" style="rounded=1;whiteSpace=wrap;fillColor=#FCE4EC;strokeColor=#880E4F;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="60" y="700" width="740" height="80" as="geometry"/>
+    </mxCell>
+
+    <!-- =========================================================
+         USUARIOS
+    ========================================================== -->
+    <mxCell id="u1" value="Data Scientist&#xa;Metricas + SHAP" style="ellipse;whiteSpace=wrap;fillColor=#F5F5F5;strokeColor=#616161;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="60" y="870" width="180" height="60" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="u2" value="Operador ZMVM&#xa;Contingencias + alertas" style="ellipse;whiteSpace=wrap;fillColor=#F5F5F5;strokeColor=#616161;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="290" y="870" width="180" height="60" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="u3" value="Ciudadano&#xa;Pronostico + semaforo" style="ellipse;whiteSpace=wrap;fillColor=#F5F5F5;strokeColor=#616161;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="520" y="870" width="180" height="60" as="geometry"/>
+    </mxCell>
+
+    <!-- =========================================================
+         INFRAESTRUCTURA (derecha, dashed)
+    ========================================================== -->
+    <mxCell id="secrets" value="AWS Secrets Manager&#xa;Credenciales · API keys" style="rounded=1;whiteSpace=wrap;fillColor=#ECEFF1;strokeColor=#455A64;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="880" y="540" width="200" height="60" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="docker" value="Docker&#xa;Imagen contenedor" style="rounded=1;whiteSpace=wrap;fillColor=#ECEFF1;strokeColor=#455A64;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="880" y="620" width="200" height="60" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="cfn" value="CloudFormation&#xa;infra/core.yaml  —  IaC" style="rounded=1;whiteSpace=wrap;fillColor=#ECEFF1;strokeColor=#455A64;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="880" y="700" width="200" height="60" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="cw" value="CloudWatch Logs&#xa;Logging estructurado" style="rounded=1;whiteSpace=wrap;fillColor=#ECEFF1;strokeColor=#455A64;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="880" y="780" width="200" height="60" as="geometry"/>
+    </mxCell>
+
+    <!-- =========================================================
+         EDGES: Flujo principal (solido)
+    ========================================================== -->
+    <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#E65100;" edge="1" source="src1" target="etl" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#E65100;" edge="1" source="src2" target="etl" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#E65100;" edge="1" source="src3" target="etl" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#1565C0;" edge="1" source="etl" target="lake" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#00695C;" edge="1" source="lake" target="ml" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#6A1B9A;" edge="1" source="ml" target="app" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#880E4F;" edge="1" source="app" target="u1" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#880E4F;" edge="1" source="app" target="u2" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#880E4F;" edge="1" source="app" target="u3" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- Feedback loop: Data Scientist → ML (dashed rojo, lado izquierdo) -->
+    <mxCell id="e10" value="feedback" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#C62828;strokeWidth=2;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;" edge="1" source="u1" target="ml" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="30" y="900"/>
+          <mxPoint x="30" y="580"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- =========================================================
+         EDGES: Infraestructura (dashed gris)
+    ========================================================== -->
+    <mxCell id="e11" value="credenciales" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#455A64;strokeWidth=1;fontSize=10;" edge="1" source="secrets" target="app" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e12" value="imagen Docker" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#455A64;strokeWidth=1;fontSize=10;" edge="1" source="docker" target="app" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e13" value="despliega" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#455A64;strokeWidth=1;fontSize=10;" edge="1" source="cfn" target="app" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e14" value="logs" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#455A64;strokeWidth=1;fontSize=10;" edge="1" source="cw" target="app" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+  </root>
+</mxGraphModel>
