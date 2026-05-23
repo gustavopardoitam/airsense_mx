@@ -629,6 +629,12 @@ Vista de la aplicación Streamlit con el dashboard principal de calidad del aire
 
 ![Pantalla AirSense MX — Streamlit Dashboard](docs/assets/Pantalla_AirSenseMX.png)
 
+### Evidencia Stack AWS
+
+Recursos desplegados en AWS para AirSense MX: ECS Fargate, ALB, ECR, S3, CloudWatch.
+
+![Evidencia Stack AWS](docs/assets/Evidenciad_Stack_AWS.png)
+
 ### Calidad de Código — Pylint 9.23/10
 
 Resultado del análisis estático de código con Pylint sobre los módulos Silver ETL (`etl/silver/`). Se identificaron únicamente advertencias menores de código duplicado (`R0801`) en bloques de logging estructurado compartidos entre `openmeteo_silver.py` y `rama_silver.py`.
