@@ -1,0 +1,422 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: |
+  AirSense MX — Infrastructure as Code (CloudFormation)
+  Depliega: EC2 t3.small, ALB, S3 Data Lake, CloudWatch, Secrets Manager, Lambda, EventBridge
+  Autores: Antonio Esparza, Gustavo Pardo | Mayo 2026
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+    Description: "Ambiente: dev (testing) o prod (producción)"
+
+  AppName:
+    Type: String
+    Default: airsense-mx
+    Description: "Nombre base de la aplicación"
+
+  InstanceType:
+    Type: String
+    Default: t3.small
+    AllowedValues: [t3.micro, t3.small, t3.medium]
+    Description: "Tipo de instancia EC2"
+
+  KeyName:
+    Type: String
+    Description: "EC2 Key Pair (para SSH)"
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: "VPC ID donde desplegar la app"
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: "Subnets para ALB y EC2 (mínimo 2)"
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Configuración General"
+        Parameters:
+          - Environment
+          - AppName
+      - Label:
+          default: "EC2"
+        Parameters:
+          - InstanceType
+          - KeyName
+      - Label:
+          default: "Networking"
+        Parameters:
+          - VpcId
+          - SubnetIds
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: ami-0c55b159cbfafe1f0  # Amazon Linux 2
+    us-west-2:
+      AMI: ami-0d1cd67c26f5fca19
+    eu-west-1:
+      AMI: ami-0d71ea30463e0ff8d
+
+Resources:
+  # ============================================================================
+  # SECURITY GROUPS
+  # ============================================================================
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "ALB security group — HTTP/HTTPS"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppName}-alb-sg"
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "EC2 security group — app traffic"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8501
+          ToPort: 8501
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppName}-ec2-sg"
+
+  # ============================================================================
+  # IAM ROLES
+  # ============================================================================
+
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: S3DataLakeAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub "arn:aws:s3:::${DataLakeBucket}"
+                  - !Sub "arn:aws:s3:::${DataLakeBucket}/*"
+        - PolicyName: SecretsManagerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AppName}/*"
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:PutLogEvents
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/airsense-mx/*"
+        - PolicyName: BedrockAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0"
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2Role
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ETLExecute
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:*
+                  - glue:*
+                  - athena:*
+                Resource: "*"
+
+  # ============================================================================
+  # S3 DATA LAKE
+  # ============================================================================
+
+  DataLakeBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AppName}-${Environment}-data-lake-${AWS::AccountId}"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppName}-data-lake"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ============================================================================
+  # CLOUDWATCH LOGS
+  # ============================================================================
+
+  StreamlitLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/airsense-mx/streamlit"
+      RetentionInDays: 7
+
+  ETLLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/airsense-mx/etl"
+      RetentionInDays: 7
+
+  # ============================================================================
+  # EC2 INSTANCE
+  # ============================================================================
+
+  StreamlitInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      SubnetId: !Select [0, !Ref SubnetIds]
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          set -e
+          
+          # Actualizar sistema
+          yum update -y
+          yum install -y docker python3.11 git
+          
+          # Iniciar Docker
+          systemctl start docker
+          systemctl enable docker
+          usermod -aG docker ec2-user
+          
+          # Clonar repositorio
+          cd /opt
+          git clone https://github.com/gustavopardoitam/airsense_mx.git
+          cd airsense_mx
+          
+          # Crear directorio de logs
+          mkdir -p logs
+          
+          # Docker Compose (Streamlit)
+          docker run -d \
+            --name streamlit-app \
+            -p 8501:8501 \
+            -e AWS_DEFAULT_REGION=us-east-1 \
+            -v /opt/airsense_mx:/app \
+            -w /app \
+            python:3.11 \
+            bash -c "pip install -r requirements.txt && streamlit run app/main.py"
+          
+          # CloudWatch agent setup
+          yum install -y amazon-cloudwatch-agent
+          
+          echo "✓ Streamlit deploy complete"
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppName}-streamlit"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ============================================================================
+  # APPLICATION LOAD BALANCER
+  # ============================================================================
+
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub "${AppName}-alb"
+      Subnets: !Ref SubnetIds
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppName}-alb"
+
+  StreamlitTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${AppName}-tg"
+      Port: 8501
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetType: instance
+      Targets:
+        - Id: !Ref StreamlitInstance
+          Port: 8501
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !GetAtt ApplicationLoadBalancer.LoadBalancerArn
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !GetAtt StreamlitTargetGroup.TargetGroupArn
+
+  # ============================================================================
+  # LAMBDA + EVENTBRIDGE (ETL SCHEDULER)
+  # ============================================================================
+
+  ETLLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AppName}-etl-batch"
+      Runtime: python3.11
+      Handler: index.handler
+      Role: !GetAtt LambdaRole.Arn
+      Timeout: 3600
+      Environment:
+        Variables:
+          DATA_LAKE_BUCKET: !Ref DataLakeBucket
+          ENVIRONMENT: !Ref Environment
+      Code:
+        ZipFile: |
+          import json
+          def handler(event, context):
+              print(f"ETL batch job started: {event}")
+              # TODO: Implementar lógica ETL (Bronze → Silver)
+              return {'statusCode': 200, 'body': json.dumps('ETL batch complete')}
+
+  ETLScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${AppName}-etl-schedule"
+      ScheduleExpression: "cron(0 6 * * ? *)"  # 06:00 AM UTC
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt ETLLambda.Arn
+          Id: ETLLambdaTarget
+
+  ETLSchedulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ETLLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ETLScheduleRule.Arn
+
+  # ============================================================================
+  # SECRETS MANAGER
+  # ============================================================================
+
+  AppSecrets:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub "${AppName}/secrets"
+      Description: "AirSense MX API keys and credentials"
+      SecretString: !Sub |
+        {
+          "bedrock_model_id": "anthropic.claude-3-5-haiku-20241022-v1:0",
+          "streamlit_auth_token": "placeholder",
+          "openmeteo_api_url": "https://archive-api.open-meteo.com/v1/archive"
+        }
+
+Outputs:
+  ALBDnsName:
+    Description: "Application Load Balancer DNS"
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub "${AppName}-alb-dns"
+
+  StreamlitUrl:
+    Description: "Streamlit App URL"
+    Value: !Sub "http://${ApplicationLoadBalancer.DNSName}:8501"
+
+  DataLakeBucket:
+    Description: "S3 Data Lake Bucket"
+    Value: !Ref DataLakeBucket
+    Export:
+      Name: !Sub "${AppName}-data-lake-bucket"
+
+  EC2InstanceId:
+    Description: "EC2 Instance ID (Streamlit)"
+    Value: !Ref StreamlitInstance
+
+  StreamlitLogGroup:
+    Description: "CloudWatch Log Group for Streamlit"
+    Value: !Ref StreamlitLogGroup
+
+  ETLLogGroup:
+    Description: "CloudWatch Log Group for ETL"
+    Value: !Ref ETLLogGroup

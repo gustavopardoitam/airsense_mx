@@ -1,0 +1,23 @@
+# AWS CloudFormation — Infra IaC
+# Ignorar archivos sensibles (credenciales, parámetros, etc.)
+
+# Parámetros por ambiente (contienen secretos)
+parameters.yaml
+parameters.json
+
+# Archivos de backup/temporal
+*.backup
+*.bak
+*.tmp
+*.swp
+*~
+
+# AWS CLI outputs
+outputs.json
+stack-events.txt
+
+# IDE
+.DS_Store
+.vscode/
+*.pyc
+__pycache__/
