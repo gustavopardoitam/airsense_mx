@@ -1,1 +1,0 @@
-"""Runbooks operacionales para incidentes."""
