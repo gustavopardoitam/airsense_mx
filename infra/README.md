@@ -70,7 +70,7 @@ echo "ECR URI: $ECR_URI"
 
 ```bash
 # Desde la raíz del repositorio
-docker build -t "${ECR_URI}:latest" .
+docker build --network sagemaker -t "${ECR_URI}:latest" .
 ```
 
 > Asegúrate de tener un `Dockerfile` en la raíz del proyecto que exponga el puerto 8501 y ejecute `streamlit run app/main.py`.
@@ -148,7 +148,7 @@ La URL tendrá el formato: `http://<alb-dns>.us-east-1.elb.amazonaws.com`
 git pull
 
 # 2. Rebuild y push de la imagen
-docker build -t "${ECR_URI}:latest" .
+docker build --network sagemaker -t "${ECR_URI}:latest" .
 docker push "${ECR_URI}:latest"
 
 # 3. Re-deploy (actualiza ECS con la nueva imagen)
