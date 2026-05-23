@@ -39,7 +39,7 @@ env/
 
 # Jupyter
 .ipynb_checkpoints
-*.ipynb
+#*.ipynb
 
 # Environment variables
 .env
@@ -69,6 +69,12 @@ artifacts/reports/*
 htmlcov/
 .tox/
 
+# Modelos versionados (regenerables)
+artifacts/models_v*/
+
+# Configuración operacional (no va al repo)
+bucket-policy*.json
+
 # OS
 .DS_Store
 Thumbs.db
@@ -92,3 +98,5 @@ artifacts/test_*/
 artifacts/models/
 artifacts/predictions/
 tests/fixtures/*.parquet
+*.bak
+playground.ipynb
