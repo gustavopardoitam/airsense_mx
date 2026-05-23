@@ -14,10 +14,10 @@ Infraestructura minimalista usando **AWS CloudFormation + ECS Fargate**. Desplie
 - **ECS Fargate** — Contenedor Streamlit (sin administrar servidores)
 - **Application Load Balancer (ALB)** — Enrutamiento y health checks
 - **Amazon ECR** — Registro de imágenes Docker
-- **S3 Data Lake** — bronze/, silver/, gold/ (Parquet + Snappy)
 - **CloudWatch Logs** — Logging centralizado de app
-- **AWS Secrets Manager** — API keys y configuración
 - **Amazon Bedrock** — Claude Haiku para explicaciones NLP
+
+> El bucket S3 (`S3BucketName`) debe existir previamente. El template **no lo crea** para evitar conflictos en re-despliegues.
 
 ---
 
@@ -25,12 +25,8 @@ Infraestructura minimalista usando **AWS CloudFormation + ECS Fargate**. Desplie
 
 ```
 infra/
-├── README.md                  # este archivo
-├── core.yaml                  # Stack principal CloudFormation
-├── parameters.example.yaml    # Parámetros de configuración (template)
-├── deploy.sh                  # Script de deployment
-├── rollback.sh                # Script de rollback
-└── Makefile                   # Comandos útiles
+├── README.md     # este archivo
+└── core.yaml     # Stack CloudFormation (ECS Fargate, ALB, IAM, CloudWatch)
 ```
 
 ---
@@ -43,6 +39,19 @@ infra/
 aws --version          # AWS CLI v2+
 docker --version       # Docker Desktop corriendo
 aws sts get-caller-identity  # Verificar credenciales activas
+```
+
+---
+
+### Paso 0 — Borrar stack atascado (si aplica)
+
+Si el stack quedó en estado `ROLLBACK_COMPLETE` o `CREATE_FAILED`, bórralo antes de continuar:
+
+```bash
+aws cloudformation delete-stack --stack-name airsense-mx --region us-east-1
+
+# Esperar a que termine
+aws cloudformation wait stack-delete-complete --stack-name airsense-mx --region us-east-1
 ```
 
 ---
@@ -117,12 +126,13 @@ echo "Subnets: $SUBNET_IDS"
 aws cloudformation deploy \
   --template-file infra/core.yaml \
   --stack-name airsense-mx \
-  --capabilities CAPABILITY_NAMED_IAM \
+  --capabilities CAPABILITY_IAM \
   --region us-east-1 \
   --parameter-overrides \
     VpcId="$VPC_ID" \
     SubnetIds="$SUBNET_IDS" \
     ImageUri="${ECR_URI}:latest" \
+    S3BucketName="itam-analytics-antonio" \
   --no-fail-on-empty-changeset
 ```
 
@@ -155,12 +165,13 @@ docker push "${ECR_URI}:latest"
 aws cloudformation deploy \
   --template-file infra/core.yaml \
   --stack-name airsense-mx \
-  --capabilities CAPABILITY_NAMED_IAM \
+  --capabilities CAPABILITY_IAM \
   --region us-east-1 \
   --parameter-overrides \
     VpcId="$VPC_ID" \
     SubnetIds="$SUBNET_IDS" \
     ImageUri="${ECR_URI}:latest" \
+    S3BucketName="itam-analytics-antonio" \
   --no-fail-on-empty-changeset
 ```
 
@@ -172,10 +183,8 @@ aws cloudformation deploy \
 
 | Archivo | Propósito |
 |---------|-----------|
-| `core.yaml` | CloudFormation template (EC2, ALB, S3, IAM, etc.) |
-| `parameters.yaml` | Parámetros por ambiente (NO versionado) |
-| `deploy.sh` | Script Bash para crear/actualizar stack |
-| `rollback.sh` | Script para rollback de cambios |
+| `core.yaml` | CloudFormation template (ECS Fargate, ALB, IAM, CloudWatch) |
+| `README.md` | Guía de despliegue paso a paso |
 
 ---
 
@@ -183,19 +192,19 @@ aws cloudformation deploy \
 
 | Recurso | Costo/mes |
 |---------|-----------|
-| EC2 t3.small (730 hrs) | $12 |
+| ECS Fargate (512 CPU / 1024 MB, ~730 hrs) | ~$15 |
 | ALB | $7 |
-| S3 (100 GB) | $2.30 |
+| S3 (100 GB, ya existente) | $2.30 |
 | CloudWatch Logs | $2.50 |
-| **Total** | **~$25** |
+| **Total** | **~$27** |
 
 ---
 
 ## Referencias
 
-- [CloudFormation Docs](https://docs.aws.amazon.com/cloudformation/)
-- [EC2 User Data](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html)
-- [Hive Partitioning](https://docs.aws.amazon.com/glue/latest/dg/partition-projection.html)
+- [CloudFormation ECS Fargate](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/AWS_Fargate.html)
+- [ALB + ECS](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/introduction.html)
+- [Hive Partitioning (Athena)](https://docs.aws.amazon.com/glue/latest/dg/partition-projection.html)
 
 ---
 
