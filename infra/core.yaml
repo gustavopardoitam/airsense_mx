@@ -1,0 +1,222 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  AirSense MX — ECS Fargate + ALB (sin recursos con nombre fijo).
+  Autores: Antonio Esparza, Gustavo Pardo | Mayo 2026
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PARAMETERS
+# ─────────────────────────────────────────────────────────────────────────────
+Parameters:
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC donde se desplegará la aplicación.
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Al menos dos subnets en diferentes AZs (para ALB y ECS).
+
+  ImageUri:
+    Type: String
+    Description: URI completo de la imagen ECR (account.dkr.ecr.region.amazonaws.com/repo:tag).
+
+  S3BucketName:
+    Type: String
+    Description: Nombre del bucket S3 existente con los datos (bronze/silver/gold).
+
+  ServiceName:
+    Type: String
+    Default: airsense-mx
+    Description: Prefijo lógico para la familia de la task definition.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RESOURCES
+# ─────────────────────────────────────────────────────────────────────────────
+Resources:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # IAM Roles (sin RoleName → CloudFormation genera nombres únicos)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AppPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub 'arn:aws:s3:::${S3BucketName}'
+                  - !Sub 'arn:aws:s3:::${S3BucketName}/*'
+              - Effect: Allow
+                Action: bedrock:InvokeModel
+                Resource: !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # CloudWatch Logs
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ECS Cluster
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Networking — Security Groups
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB HTTP
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '0.0.0.0/0'
+
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS Streamlit
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8501
+          ToPort: 8501
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ALB + Target Group + Listener
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Type: application
+      Subnets: !Ref SubnetIds
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Protocol: HTTP
+      Port: 8501
+      VpcId: !Ref VpcId
+      TargetType: ip
+      HealthCheckPath: /_stcore/health
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ECS Task Definition + Service
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Ref ServiceName
+      Cpu: '512'
+      Memory: '1024'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: app
+          Image: !Ref ImageUri
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8501
+          Environment:
+            - Name: AWS_DEFAULT_REGION
+              Value: !Ref AWS::Region
+            - Name: S3_BUCKET
+              Value: !Ref S3BucketName
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+
+  ECSService:
+    Type: AWS::ECS::Service
+    DependsOn: Listener
+    Properties:
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: app
+          ContainerPort: 8501
+          TargetGroupArn: !Ref TargetGroup
+      HealthCheckGracePeriodSeconds: 120
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OUTPUTS
+# ─────────────────────────────────────────────────────────────────────────────
+Outputs:
+
+  AppURL:
+    Description: URL pública de la aplicación Streamlit.
+    Value: !Sub 'http://${ALB.DNSName}'
+
+  ECSClusterName:
+    Description: Nombre del cluster ECS.
+    Value: !Ref ECSCluster
+
+  LogGroupName:
+    Description: Log group de CloudWatch.
+    Value: !Ref LogGroup

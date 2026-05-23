@@ -16,13 +16,13 @@ Uso:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-
 
 # =============================================================================
 # RESOLUCIÓN DEL ROOT DEL REPOSITORIO
 # =============================================================================
+
 
 def find_repo_root(start: Path) -> Path:
     """Encuentra el root del proyecto buscando pyproject.toml y data/.
@@ -50,6 +50,7 @@ def find_repo_root(start: Path) -> Path:
 # =============================================================================
 # RUTAS LOCALES DEL PROYECTO
 # =============================================================================
+
 
 @dataclass(frozen=True)
 class PathsConfig:
@@ -93,6 +94,7 @@ class PathsConfig:
 # RUTAS S3 (DATA LAKE MEDALLION)
 # =============================================================================
 
+
 @dataclass(frozen=True)
 class S3Config:
     """Rutas del data lake en S3 con arquitectura Medallion.
@@ -102,39 +104,48 @@ class S3Config:
     Gold: predicciones del modelo listas para Streamlit/Athena
     """
 
-    bucket: str = "airsense-mx"
+    bucket: str = "itam-analytics-antonio"
+    prefix: str = "air-sense-mx"
 
     @property
     def bronze_rama(self) -> str:
-        return f"s3://{self.bucket}/bronze/rama/"
+        """Ruta S3 para datos Bronze RAMA."""
+        return f"s3://{self.bucket}/{self.prefix}/bronze/rama/"
 
     @property
     def bronze_openmeteo(self) -> str:
-        return f"s3://{self.bucket}/bronze/openmeteo/"
+        """Ruta S3 para datos Bronze Open-Meteo."""
+        return f"s3://{self.bucket}/{self.prefix}/bronze/openmeteo/"
 
     @property
     def bronze_pcaa(self) -> str:
-        return f"s3://{self.bucket}/bronze/pcaa/"
+        """Ruta S3 para datos Bronze PCAA."""
+        return f"s3://{self.bucket}/{self.prefix}/bronze/pcaa/"
 
     @property
     def silver_obs(self) -> str:
-        return f"s3://{self.bucket}/silver/observaciones_horarias/"
+        """Ruta S3 para observaciones horarias Silver."""
+        return f"s3://{self.bucket}/{self.prefix}/silver/observaciones_horarias/"
 
     @property
     def silver_meteo(self) -> str:
-        return f"s3://{self.bucket}/silver/meteo_horario/"
+        """Ruta S3 para datos meteorológicos horarios Silver."""
+        return f"s3://{self.bucket}/{self.prefix}/silver/meteo_horario/"
 
     @property
     def gold_predicciones(self) -> str:
-        return f"s3://{self.bucket}/gold/predicciones_diarias/"
+        """Ruta S3 para predicciones diarias Gold."""
+        return f"s3://{self.bucket}/{self.prefix}/gold/predicciones_diarias/"
 
     @property
     def dim_estaciones(self) -> str:
-        return f"s3://{self.bucket}/dim/dim_estaciones.csv"
+        """Ruta S3 para el catálogo de estaciones."""
+        return f"s3://{self.bucket}/{self.prefix}/dim/dim_estaciones.csv"
 
     @property
     def models(self) -> str:
-        return f"s3://{self.bucket}/models/"
+        """Ruta S3 para artefactos de modelos ML."""
+        return f"s3://{self.bucket}/{self.prefix}/models/"
 
 
 # Catálogo Glue
@@ -147,6 +158,7 @@ GLUE_DATABASES = {
 # =============================================================================
 # PARÁMETROS DE DOMINIO: UMBRALES Y FEATURES
 # =============================================================================
+
 
 @dataclass(frozen=True)
 class ContaminantConfig:
@@ -165,15 +177,15 @@ class ContaminantConfig:
 
     # -------- Umbrales PCAA para contingencia Fase I --------
     # Ozono: pico horario máximo del día
-    o3_threshold_ppb: float = 140.0       # max 1h
+    o3_threshold_ppb: float = 140.0  # max 1h
     # Dióxido de nitrógeno: pico horario máximo del día
-    no2_threshold_ppb: float = 188.0      # max 1h
+    no2_threshold_ppb: float = 188.0  # max 1h
     # Dióxido de azufre: pico horario máximo del día
-    so2_threshold_ppb: float = 185.0      # max 1h
+    so2_threshold_ppb: float = 185.0  # max 1h
     # PM2.5: promedio móvil 24 horas
-    pm25_threshold_ugm3: float = 79.0     # avg 24h
+    pm25_threshold_ugm3: float = 79.0  # avg 24h
     # PM10: promedio móvil 24 horas
-    pm10_threshold_ugm3: float = 146.0    # avg 24h
+    pm10_threshold_ugm3: float = 146.0  # avg 24h
     # CO: no aplica para contingencia PCAA
 
     # -------- Split temporal para train/valid --------
@@ -205,10 +217,10 @@ class ContaminantConfig:
 # Diccionario de umbrales con metadata, útil para iterar sobre contaminantes
 # y construir labels o features sin hardcodear valores.
 UMBRALES_PCAA = {
-    "O3":   {"valor": 140.0, "unidad": "ppb",   "ventana": "max_1h"},
-    "NO2":  {"valor": 188.0, "unidad": "ppb",   "ventana": "max_1h"},
-    "SO2":  {"valor": 185.0, "unidad": "ppb",   "ventana": "max_1h"},
-    "PM25": {"valor":  79.0, "unidad": "ug/m3", "ventana": "avg_24h"},
+    "O3": {"valor": 140.0, "unidad": "ppb", "ventana": "max_1h"},
+    "NO2": {"valor": 188.0, "unidad": "ppb", "ventana": "max_1h"},
+    "SO2": {"valor": 185.0, "unidad": "ppb", "ventana": "max_1h"},
+    "PM25": {"valor": 79.0, "unidad": "ug/m3", "ventana": "avg_24h"},
     "PM10": {"valor": 146.0, "unidad": "ug/m3", "ventana": "avg_24h"},
 }
 
@@ -237,6 +249,7 @@ ZONA_NOMBRES = {
 # =============================================================================
 # FUNCIÓN OFICIAL DE SEMÁFORO
 # =============================================================================
+
 
 def calcular_semaforo(valor_predicho: float, umbral: float) -> str:
     """Devuelve el nivel de alerta según el valor predicho vs umbral.

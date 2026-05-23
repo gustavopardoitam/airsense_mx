@@ -37,10 +37,12 @@ dependencies = [
     "s3fs>=0.4.2",
     "pdfplumber>=0.11.9",
     "scipy>=1.17.1",
+    "xlrd>=2.0.2",
 ]
 
 [dependency-groups]
 dev = [
+    "pylint>=4.0.5",
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
     "ruff>=0.1.0",
@@ -53,6 +55,10 @@ fix = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "C4", "UP", "D"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/test_*.py" = ["D101", "D102", "D103", "D205", "D400", "D415"]
+"tests/**" = ["D100", "D101", "D102", "D103", "D104", "D200", "D205", "D400", "D415"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

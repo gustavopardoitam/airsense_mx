@@ -16,7 +16,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Instalar dependencias desde lockfile (reproducible)
-COPY pyproject.toml uv.lock ./
+# COPY pyproject.toml uv.lock ./
+# RUN uv sync --frozen --no-dev --no-editable
+
+COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --frozen --no-dev --no-editable
 
 COPY .streamlit/ .streamlit/

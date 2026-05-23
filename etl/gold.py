@@ -34,7 +34,14 @@ def build_daily_panel() -> None:
 
     TODO: Implementar
     """
-    logger.info("TODO: Construir panel diario")
+    logger.info(
+        "Iniciando build_daily_panel",
+        extra={"stage": "gold", "step": "build_daily_panel"},
+    )
+    logger.warning(
+        "TODO: build_daily_panel no implementado",
+        extra={"stage": "gold"},
+    )
 
 
 def engineer_features() -> None:
@@ -52,7 +59,14 @@ def engineer_features() -> None:
         3. Crear lags por (station, pollutant)
         4. Agregar features meteorológicas
     """
-    logger.info("TODO: Engineer features")
+    logger.info(
+        "Iniciando engineer_features",
+        extra={"stage": "gold", "step": "engineer_features"},
+    )
+    logger.warning(
+        "TODO: engineer_features no implementado",
+        extra={"stage": "gold"},
+    )
 
 
 def create_contingency_labels() -> None:
@@ -68,4 +82,11 @@ def create_contingency_labels() -> None:
 
     TODO: Implementar
     """
-    logger.info("TODO: Crear labels de contingencia")
+    logger.info(
+        "Iniciando create_contingency_labels",
+        extra={"stage": "gold", "step": "create_labels"},
+    )
+    logger.warning(
+        "TODO: create_contingency_labels no implementado",
+        extra={"stage": "gold"},
+    )

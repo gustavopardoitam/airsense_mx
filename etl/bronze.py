@@ -1,77 +1,199 @@
-"""Capa Bronze: Ingestión de datos crudos a S3.
+"""Capa Bronze: Copia archivos crudos de data/raw/ a AWS S3.
 
-Fuentes:
-    - RAMA/SIMAT: Contaminantes (O₃, SO₂, NOₓ, CO, PM10, PM2.5, H₂S)
-    - Open-Meteo: Datos meteorológicos históricos
-    - PCAA: Registros de contingencias ambientales
+Automatiza la subida de todos los archivos de contaminantes y meteorología
+desde `data/raw/` (incluyendo subcarpetas) al bucket S3 especificado, 
+preservando estructura y formato.
 
-Schema mínimo Bronze:
-    - Todos los campos de la fuente original
-    - _ingested_at: timestamp de ingestión
-    - _source_file: nombre del archivo original
+Características:
+    - Descubre automáticamente **todos** los archivos en `data/raw/` (recursivo)
+    - Preserva estructura de carpetas anidadas en S3
+    - Sube directamente a S3 (sin conversión)
+    - Estructura en S3: `s3://<your-bucket-name>/air-sense-mx/bronze/`
+    - Idempotente: verifica existencia antes de sobrescribir
+    - Logs con cifras de control: archivos procesados, bytes, tiempo
 
-Particionamiento: year/month
+Ejemplo de estructura de salida:
+    - data/raw/file1.json → s3://<your-bucket-name>/air-sense-mx/bronze/file1.json
+    - data/raw/subfolder/file2.csv → s3://<your-bucket-name>/air-sense-mx/bronze/subfolder/file2.csv
+    - data/raw/a/b/c/file3.xlsx → s3://<your-bucket-name>/air-sense-mx/bronze/a/b/c/file3.xlsx
 
-Todo:
-    - Implementar ingestión desde RAMA/SIMAT API
-    - Implementar descarga de Open-Meteo
-    - Implementar carga de PCAA
-    - S3 upload con awswrangler
+Uso:
+
+    uv run python -m etl.bronze --bucket <your-bucket-name>
+    uv run python -m etl.bronze --bucket <your-bucket-name> --data-dir /ruta/custom
+
+Requisitos:
+    boto3 — con permisos S3:PutObject.
 """
 
 from __future__ import annotations
 
-from utils.logging import get_logger
+import argparse
+import sys
+import time
+from pathlib import Path
+
+import boto3
+from botocore.exceptions import ClientError
+
+from utils.logging import get_logger, setup_logging
 
 logger = get_logger(__name__)
 
-# Whitelist explícita de archivos esperados en Bronze
-BRONZE_FILES: list[str] = [
-    "rama_simat_2024.parquet",
-    "open_meteo_2024.parquet",
-    "pcaa_2024.parquet",
-]
+# Configuración
+S3_PREFIX: str = "air-sense-mx/bronze"
 
 
-def ingest_rama_simat() -> None:
-    """Descarga y carga datos de RAMA/SIMAT a Bronze en S3.
+def upload_files_to_s3(
+    data_dir: Path, bucket: str, dry_run: bool = False
+) -> dict[str, int]:
+    """Descubre archivos recursivamente en data_dir y los sube a S3.
 
-    TODO: Implementar
-        1. Query a API RAMA/SIMAT
-        2. Normalizar schema
-        3. Agregar columnas técnicas (_ingested_at, _source_file)
-        4. Guardar a S3 particionado por year/month
+    Args:
+        data_dir: Ruta local al directorio de datos.
+        bucket: Nombre del bucket S3 destino.
+        dry_run: Si es True, solo simula sin subir.
 
-    Raises:
-        DataUnavailableError: Si la API no está disponible
+    Returns:
+        Diccionario con conteos: {"uploaded": N, "skipped": N, "failed": N, "bytes": B}
     """
-    logger.info("TODO: Ingestión RAMA/SIMAT")
+    if not data_dir.is_dir():
+        raise RuntimeError(f"Directorio no encontrado: {data_dir}")
+
+    s3_client = boto3.client("s3")
+    stats = {"uploaded": 0, "skipped": 0, "failed": 0, "bytes": 0}
+
+    # Descubre archivos recursivamente (incluyendo subcarpetas)
+    archivos = sorted([f for f in data_dir.rglob("*") if f.is_file()])
+
+    if not archivos:
+        logger.warning("No hay archivos en %s", data_dir)
+        return stats
+
+    logger.info(
+        "Descubiertos %d archivo(s) en %s (recursivo)",
+        len(archivos),
+        data_dir,
+        extra={"data_dir": str(data_dir), "files_count": len(archivos)},
+    )
+
+    for file_path in archivos:
+        try:
+            # Mantiene la estructura de carpetas relativa
+            relative_path = file_path.relative_to(data_dir)
+            s3_key = f"{S3_PREFIX}/{relative_path}"
+            file_size = file_path.stat().st_size
+
+            # Verifica si existe en S3
+            try:
+                s3_client.head_object(Bucket=bucket, Key=s3_key)
+                logger.info(
+                    "Saltado (existe en S3): %s",
+                    relative_path,
+                    extra={"file": str(relative_path), "s3_key": s3_key},
+                )
+                stats["skipped"] += 1
+                continue
+            except ClientError as e:
+                # Verifica si es 404 (objeto no existe)
+                if e.response["Error"]["Code"] != "404":
+                    # Es otro error, re-lanzar
+                    raise
+                # Si es 404, continuar con la subida
+
+            if dry_run:
+                logger.info(
+                    "[DRY-RUN] Subiría: %s → s3://%s/%s (%d bytes)",
+                    relative_path,
+                    bucket,
+                    s3_key,
+                    file_size,
+                )
+                stats["uploaded"] += 1
+                stats["bytes"] += file_size
+            else:
+                # Sube a S3
+                s3_client.upload_file(str(file_path), bucket, s3_key)
+                logger.info(
+                    "✓ Subido: %s → s3://%s/%s (%d bytes)",
+                    relative_path,
+                    bucket,
+                    s3_key,
+                    file_size,
+                    extra={
+                        "file": str(relative_path),
+                        "s3_key": s3_key,
+                        "bytes": file_size,
+                    },
+                )
+                stats["uploaded"] += 1
+                stats["bytes"] += file_size
+
+        except Exception as exc:
+            logger.error(
+                "Error subiendo %s: %s",
+                file_path,
+                str(exc),
+                extra={"file": str(file_path), "error": str(exc)},
+            )
+            stats["failed"] += 1
+
+    return stats
 
 
-def ingest_open_meteo() -> None:
-    """Descarga y carga datos meteorológicos de Open-Meteo a Bronze.
+def main() -> None:
+    """Orquesta la subida de archivos raw a Bronze en S3."""
+    parser = argparse.ArgumentParser(
+        description="ETL capa Bronze — Copia raw files a S3"
+    )
+    parser.add_argument("--bucket", required=True, help="Nombre del bucket S3 destino")
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=None,
+        help="Ruta a data/raw/ (default: data/raw)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simula sin subir a S3",
+    )
+    args = parser.parse_args()
 
-    TODO: Implementar
-        1. Query a Open-Meteo Historical Weather API
-        2. Variables: temperatura, humedad, presión, viento
-        3. Frecuencia: horaria
-        4. Guardar a S3 particionado por year/month
+    # Setup
+    setup_logging()
+    data_dir = args.data_dir or Path("data/raw")
 
-    Raises:
-        DataUnavailableError: Si la API no está disponible
-    """
-    logger.info("TODO: Ingestión Open-Meteo")
+    try:
+        logger.info("=== Bronze ETL — inicio ===")
+        logger.info(
+            "Bucket: %s | Data dir: %s | Dry-run: %s",
+            args.bucket,
+            data_dir,
+            args.dry_run,
+        )
+
+        t_start = time.time()
+        stats = upload_files_to_s3(data_dir, args.bucket, args.dry_run)
+        elapsed = time.time() - t_start
+
+        # Cifras de control finales
+        logger.info("=== Bronze ETL — cifras de control ===")
+        logger.info("  Archivos subidos    : %d", stats["uploaded"])
+        logger.info("  Archivos saltados   : %d", stats["skipped"])
+        logger.info("  Archivos fallidos   : %d", stats["failed"])
+        logger.info(
+            "  Bytes totales       : %d (%.2f MB)",
+            stats["bytes"],
+            stats["bytes"] / 1e6,
+        )
+        logger.info("  Tiempo total        : %.1fs", elapsed)
+        logger.info("=== Bronze ETL — fin OK ===")
+
+    except Exception:
+        logger.exception("Error fatal en Bronze ETL")
+        sys.exit(1)
 
 
-def ingest_pcaa() -> None:
-    """Carga registros de contingencias ambientales a Bronze.
-
-    TODO: Implementar
-        1. Leer archivo o query API de PCAA
-        2. Schema: date, contingency_phase (0-3), affected_areas
-        3. Guardar a S3 particionado por year/month
-
-    Raises:
-        DataUnavailableError: Si la fuente no está disponible
-    """
-    logger.info("TODO: Ingestión PCAA")
+if __name__ == "__main__":
+    main()

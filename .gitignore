@@ -51,6 +51,7 @@ data/raw/*
 data/prep/*
 data/inference/*
 artifacts/logs/*
+logs/
 artifacts/models/*.pkl
 artifacts/models/*.joblib
 artifacts/predictions/*
@@ -100,3 +101,11 @@ artifacts/predictions/
 tests/fixtures/*.parquet
 *.bak
 playground.ipynb
+.github/prompts/*
+silver_etl_generation.prompt.md
+
+# Ignore data files by default
+data/*
+
+# Keep required catalogs
+!data/dim_estaciones.csvcode-reviewer/

@@ -40,7 +40,14 @@ def normalize_timestamps() -> None:
 
     TODO: Implementar
     """
-    logger.info("TODO: Normalizar timestamps")
+    logger.info(
+        "Iniciando normalización de timestamps",
+        extra={"stage": "silver", "step": "normalize_timestamps"},
+    )
+    logger.warning(
+        "TODO: normalize_timestamps no implementado",
+        extra={"stage": "silver"},
+    )
 
 
 def flag_invalid_readings() -> None:
@@ -54,7 +61,14 @@ def flag_invalid_readings() -> None:
         3. Reemplazar valores inválidos con NULL
         4. Loggear cantidad de valores inválidos por estación/contaminante
     """
-    logger.info("TODO: Marcar lecturas inválidas")
+    logger.info(
+        "Iniciando marcado de lecturas inválidas",
+        extra={"stage": "silver", "step": "flag_invalid"},
+    )
+    logger.warning(
+        "TODO: flag_invalid_readings no implementado",
+        extra={"stage": "silver"},
+    )
 
 
 def validate_schema() -> None:
@@ -65,4 +79,11 @@ def validate_schema() -> None:
         2. Requerir: station_id, pollutant, timestamp, value, unit, is_valid
         3. Tipos: station_id (str), timestamp (datetime), value (float)
     """
-    logger.info("TODO: Validar schema Silver")
+    logger.info(
+        "Iniciando validación de schema Silver",
+        extra={"stage": "silver", "step": "validate_schema"},
+    )
+    logger.warning(
+        "TODO: validate_schema no implementado",
+        extra={"stage": "silver"},
+    )
