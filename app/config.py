@@ -94,12 +94,36 @@ ZONAS_NOMBRES: dict[str, str] = {
 ZONAS_ORDEN: list[str] = ["CE", "NO", "NE", "SO", "SE"]
 
 # =============================================================================
-# RUTAS S3
+# RUTAS S3 — Bucket propio (itam-analytics-antonio)
+# La capa Gold se sincroniza desde el bucket de Gustavo mediante
+# scripts/sync_gold_from_gustavo.py y queda disponible aquí.
+# Credenciales: IAM Task Role en ECS/Fargate, IAM Role en SageMaker,
+# o variables de entorno AWS_* en local. Sin hardcodeo.
 # =============================================================================
 
-GOLD_S3_PATH: str = (
-    "s3://itam-analytics-antonio/air-sense-mx/gold/predicciones_diarias/"
+GOLD_BUCKET: str = "itam-analytics-antonio"
+GOLD_PREFIX: str = "airsense-mx"
+
+GOLD_S3_PATH: str = f"s3://{GOLD_BUCKET}/{GOLD_PREFIX}/gold/predicciones_diarias/"
+PANEL_DIARIO_S3_PATH: str = f"s3://{GOLD_BUCKET}/{GOLD_PREFIX}/gold/panel_diario/"
+DIM_ESTACIONES_S3_PATH: str = (
+    f"s3://{GOLD_BUCKET}/{GOLD_PREFIX}/dim/dim_estaciones.csv"
 )
+
+# Columnas mínimas requeridas para validar el schema al leer desde S3
+GOLD_PREDICCIONES_SCHEMA_MINIMO: list[str] = [
+    "fecha_prediccion",
+    "horizonte_dias",
+    "contaminante",
+    "valor_predicho",
+    "semaforo",
+]
+
+DIM_ESTACIONES_SCHEMA_MINIMO: list[str] = [
+    "station_id",
+    "station_name",
+    "zone",
+]
 
 # =============================================================================
 # COMPORTAMIENTO DE LA APP
