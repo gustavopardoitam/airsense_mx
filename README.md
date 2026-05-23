@@ -611,6 +611,24 @@ Este proyecto fue desarrollado por **humanos**, con **IA asistiendo en tareas es
 
 **Principio:** Todo código es original, auditable, y cualquier IA fue solo asistente editorial.
 
+
+
+---
+
+## Anexos
+
+### Niveles de Contingencia Ambiental Atmosférica (PCAA) — ZMVM 2026
+
+Activaciones del Programa de Contingencias Ambientales Atmosféricas registradas en la ZMVM durante 2026. Fuente: Secretaría del Medio Ambiente CDMX (SEDEMA).
+
+![Tabla de activaciones PCAA 2026 — Fase I y Fase II](docs/assets/pcaa_contingencias_2026.png)
+
+### Calidad de Código — Pylint 9.23/10
+
+Resultado del análisis estático de código con Pylint sobre los módulos Silver ETL (`etl/silver/`). Se identificaron únicamente advertencias menores de código duplicado (`R0801`) en bloques de logging estructurado compartidos entre `openmeteo_silver.py` y `rama_silver.py`.
+
+![Pylint score 9.23/10 — Silver ETL](docs/assets/linter_score_9_23.png)
+
 ---
 
 ## Autores
@@ -623,13 +641,3 @@ Este proyecto fue desarrollado por **humanos**, con **IA asistiendo en tareas es
 **Programa:** Maestría en Data Science  
 **Proyecto Final:** Mayo 2026 
 **Last Updated:** 23 de mayo de 2026  
-
----
-
-## Anexos
-
-### Niveles de Contingencia Ambiental Atmosférica (PCAA) — ZMVM 2026
-
-Activaciones del Programa de Contingencias Ambientales Atmosféricas registradas en la ZMVM durante 2026. Fuente: Secretaría del Medio Ambiente CDMX (SEDEMA).
-
-![Tabla de activaciones PCAA 2026 — Fase I y Fase II](docs/assets/pcaa_contingencias_2026.png)
