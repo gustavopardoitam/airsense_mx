@@ -87,8 +87,7 @@ docker-compose.override.yml
 *.pem
 secrets.json
 
-.github/prompts/
-!.github/prompts/.gitkeep
+.github/prompts/*
 
 # Ignore data files by default
 data/*
