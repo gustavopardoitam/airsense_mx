@@ -1,0 +1,71 @@
+# =============================================================================
+# Dockerfile.training — Imagen BYOC para entrenamiento + inferencia AirSense MX
+# =============================================================================
+# Imagen única que sirve para training y batch transform en SageMaker.
+# Decisión: una sola imagen (más simple para 3 días, costos ECR menores).
+#
+# SageMaker espera:
+#   - `train` como entrypoint cuando lanza un Training Job
+#   - `serve` como entrypoint cuando lanza un Batch Transform Job
+# Por eso instalamos dos scripts en /usr/local/bin/ con esos nombres exactos.
+#
+# Estructura interna del contenedor:
+#   /opt/program/                  ← código del proyecto
+#       ├── config.py
+#       ├── etl/
+#       ├── training/
+#       ├── inference/
+#       ├── evaluation/
+#       └── utils/
+#   /opt/ml/                       ← montado por SageMaker en runtime
+#       ├── input/data/training/   ← Gold parquet
+#       ├── input/config/          ← hyperparams.json
+#       ├── model/                 ← donde guardar el modelo entrenado
+#       └── output/                ← logs, métricas
+#   /usr/local/bin/train           ← script que SageMaker ejecuta para training
+#   /usr/local/bin/serve           ← script que SageMaker ejecuta para serving
+# =============================================================================
+
+FROM python:3.11-slim
+
+# Variables estándar para contenedores Python
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PATH="/opt/program:${PATH}" \
+    PYTHONPATH="/opt/program"
+
+# Dependencias del sistema mínimas
+# - build-essential: para compilar lightgbm si fuera necesario
+# - libgomp1: requerido por LightGBM en runtime (OpenMP)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        libgomp1 \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Directorio de trabajo del proyecto
+WORKDIR /opt/program
+
+# Instalar dependencias Python primero (mejor uso del cache de Docker layers)
+COPY docker/requirements.txt /opt/program/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar el código del proyecto al contenedor
+# Solo lo que el modelo necesita: NO copiamos app/, db/, infra/, notebooks/
+COPY config.py /opt/program/
+COPY etl/ /opt/program/etl/
+COPY training/ /opt/program/training/
+COPY inference/ /opt/program/inference/
+COPY evaluation/ /opt/program/evaluation/
+COPY utils/ /opt/program/utils/
+
+# Entrypoints que SageMaker invoca (deben llamarse exactamente "train" y "serve")
+COPY docker/train_entrypoint.py /usr/local/bin/train
+COPY docker/serve_entrypoint.py /usr/local/bin/serve
+RUN chmod +x /usr/local/bin/train /usr/local/bin/serve
+
+# SageMaker espera que el entrypoint sea ejecutable directamente.
+# No usamos CMD ni ENTRYPOINT global porque SageMaker pasa el verbo
+# (train/serve) explícitamente al `docker run`.

@@ -85,3 +85,10 @@ docker-compose.override.yml
 *.key
 *.pem
 secrets.json
+
+# Artifacts de test y desarrollo
+artifacts/sm_test/
+artifacts/test_*/
+artifacts/models/
+artifacts/predictions/
+tests/fixtures/*.parquet
