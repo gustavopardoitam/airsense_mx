@@ -21,6 +21,10 @@ DECISIONES DE DISEÑO
 - Estaciones: 10 representativas, 2 por zona. No son las 44 reales — es fixture.
 - Distribuciones: O3 con patrón diurno fotoquímico, PM con persistencia,
   meteo coherente con contaminación (alta T + bajo viento → picos O3).
+- METEO POR ESTACIÓN (no por zona). Acordado con Toño: cada station_id tiene
+  su propia serie meteorológica, joineable 1-a-1 con observaciones. Aunque
+  estaciones cercanas reciben valores muy similares (grilla ECMWF ~9km),
+  esto simplifica el contrato y mantiene el join 1-a-1 sin ambigüedad.
 - 3 eventos de contingencia plantados:
     * 2024-02-22 SO  O3 ≈ 167 ppb (replica el evento real)
     * 2024-03-15 NO  O3 ≈ 155 ppb (genérico)
@@ -399,6 +403,10 @@ def generate_silver_fixtures(
     start_date: str = "2024-01-01",
     end_date: str = "2024-04-01",
     seed: int = 42,
+    granularidad_meteo: str = "station",
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Genera los DataFrames sintéticos de Silver para desarrollo de Gold.
     granularidad_meteo: str = "zone",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Genera los DataFrames sintéticos de Silver para desarrollo de Gold.
