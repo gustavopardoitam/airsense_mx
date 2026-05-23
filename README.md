@@ -6,7 +6,7 @@
 **Autores:** José Antonio Esparza · Gustavo Pardo  
 **Repositorio:** https://github.com/gustavopardoitam/airsense_mx
 
-**App en producción:** http://airsense-alb-vxd3jreedsth-674208495.us-east-1.elb.amazonaws.com
+**App en producción:** http://airsense-ALB-YiHrCXbdlbCe-2095125925.us-east-1.elb.amazonaws.com
 
 ---
 
