@@ -623,3 +623,13 @@ Este proyecto fue desarrollado por **humanos**, con **IA asistiendo en tareas es
 **Programa:** Maestría en Data Science  
 **Proyecto Final:** Mayo 2026 
 **Last Updated:** 23 de mayo de 2026  
+
+---
+
+## Anexos
+
+### Niveles de Contingencia Ambiental Atmosférica (PCAA) — ZMVM 2026
+
+Activaciones del Programa de Contingencias Ambientales Atmosféricas registradas en la ZMVM durante 2026. Fuente: Secretaría del Medio Ambiente CDMX (SEDEMA).
+
+![Tabla de activaciones PCAA 2026 — Fase I y Fase II](docs/assets/pcaa_contingencias_2026.png)
