@@ -1,11 +1,11 @@
 # AirSense MX
-**Predicción de calidad del aire 
+**Predicción de calidad del aire**
 
 > Proyecto final Maestría Data Science ITAM | Mayo 2026 | 35% de la nota final
 
 **Autores:** José Antonio Esparza · Gustavo Pardo  
 **Repositorio:** https://github.com/gustavopardoitam/airsense_mx
-**App en producción:** 
+**App en producción:** http://airsense-alb-vxd3jreedsth-674208495.us-east-1.elb.amazonaws.com
 
 ---
 
@@ -24,11 +24,6 @@ AirSense MX es un sistema de predicción probabilística de contaminantes atmosf
 ## Problema de Negocio
 
 La contaminación atmosférica en la ZMVM causa ~13,000 muertes prematuras anuales (OMS). Las contingencias ambientales se declaran reactivamente, *después* de que la contaminación ya es crítica.
-
-**Gap actual:**
-- Pronósticos disponibles solo 24–48 horas antes (limitado)
-- Sin desglose por zona geográfica (CE, NO, NE, SO, SE)
-- Sin APIs accesibles para apps de salud de terceros
 
 **Solución:** Predicciones horarias 7 días adelante, por zona, con explicaciones contextuales.
 
@@ -57,36 +52,36 @@ La contaminación atmosférica en la ZMVM causa ~13,000 muertes prematuras anual
              │                  │                  │
              ▼                  ▼                  ▼
 ┌────────────────────────────────────────────────────────────┐
-│ BRONZE                                                    │
+│ BRONZE                                                     │
 │ (Raw JSON/Parquet particionado)                            │
-│ s3://airsense-mx/bronze/                                  │
-│ ├─ simat/station_id=XXX/year=YYYY/                       │
-│ └─ open_meteo/zone=ZZ/year=YYYY/                         │
-└────────────────────────┬─────────────────────────────────┘
+│ s3://airsense-mx/bronze/                                   │
+│ ├─ simat/station_id=XXX/year=YYYY/                         │
+│ └─ open_meteo/zone=ZZ/year=YYYY/                           │
+└────────────────────────┬─────────────────────────────────--┘
                          │
                          ▼
 ┌────────────────────────────────────────────────────────────┐
-│ SILVER                                                    │
-│ (Normalizado, timestamps UTC-6, long format)             │
-│ s3://airsense-mx/silver/                                 │
-│ ├─ contaminantes_horario/ (O3, PM2.5, PM10, NO2, SO2)    │
-│ └─ meteo_horario/ (temp, humedad, presión, viento, etc) │
-└────────────────────────┬─────────────────────────────────┘
+│ SILVER                                                     │
+│ (Normalizado, timestamps UTC-6, long format)               │
+│ s3://airsense-mx/silver/                                   │
+│ ├─ contaminantes_horario/ (O3, PM2.5, PM10, NO2, SO2)      │
+│ └─ meteo_horario/ (temp, humedad, presión, viento, etc)    │
+└────────────────────────┬─────────────────────────────────--┘
                          │
                          ▼
-┌────────────────────────────────────────────────────────────┐
+┌───────────────────────────────────────────────────────────┐
 │ GOLD                                                      │
 │ (Features + predicciones batch)                           │
-│ s3://airsense-mx/gold/                                   │
-│ ├─ features_1h/                                          │
-│ ├─ predicciones_batch/                                   │
-│ └─ shap_explanations/                                    │
-└────────────────────────┬─────────────────────────────────┘
+│ s3://airsense-mx/gold/                                    │
+│ ├─ features_1h/                                           │
+│ ├─ predicciones_batch/                                    │
+│ └─ shap_explanations/                                     │
+└────────────────────────┬─────────────────────────────────-┘
                          │
                          ▼
 ┌────────────────────────────────────────────────────────────┐
-│ APLICACIÓN (Streamlit + Bedrock)                         │
-│ ec2-t3-small.compute.amazonaws.com:8501                  │
+│ APLICACIÓN (Streamlit + Bedrock)                           │
+│ ec2-t3-small.compute.amazonaws.com:8501                    │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -99,7 +94,7 @@ La contaminación atmosférica en la ZMVM causa ~13,000 muertes prematuras anual
 | **Data** | pandas, pyarrow, awswrangler, sqlalchemy |
 | **ML** | lightgbm, scikit-learn, joblib, shap |
 | **App** | streamlit, requests, boto3 |
-| **Cloud** | AWS S3, Glue, Athena, SageMaker, Bedrock, EC2 |
+| **Cloud** | AWS S3, Glue, Athena, SageMaker, Bedrock, ECS Fargate, ALB, ECR |
 | **DevOps** | Docker, uv (Python 3.11), pytest, ruff |
 | **Config** | YAML, pathlib, frozen dataclasses |
 
@@ -135,11 +130,6 @@ airsense_mx/
 │       ├── test_openmeteo_bronze.py   # unit tests, mocks totales
 │       ├── test_bronze_open_meteo.py  # legacy tests
 │       └── test_prep.py
-├── db/
-│   ├── __init__.py
-│   ├── __main__.py
-│   ├── schema.py                      # DDL RDS
-│   └── init_db.py                     # init scripts
 ├── training/
 │   ├── __init__.py
 │   ├── __main__.py
@@ -154,8 +144,10 @@ airsense_mx/
 │   └── evaluate.py                    # validación vs PCAA, SHAP
 ├── app/
 │   ├── main.py                        # entry point Streamlit
-│   ├── pages/                         # tabs de navegación
-│   └── components/                    # funciones reutilizables
+│   ├── views/                         # páginas: dashboard, pronostico, contingencias
+│   ├── components/                    # badges, cards, charts
+│   ├── data/                          # s3_loader
+│   └── models/                        # risk_analyzer, bedrock_explainer
 ├── utils/
 │   ├── logging.py                     # setup centralizado
 │   ├── exceptions.py                  # excepciones del dominio
@@ -165,12 +157,7 @@ airsense_mx/
 │   └── __init__.py
 ├── infra/
 │   ├── README.md                      # documentación infraestructura
-│   ├── core.yaml                      # CloudFormation template (EC2, ALB, S3, etc.)
-│   ├── parameters.example.yaml        # parámetros por ambiente (template)
-│   ├── deploy.sh                      # script de deployment
-│   ├── rollback.sh                    # script de rollback
-│   ├── Makefile                       # comandos útiles
-│   └── .gitignore                     # ignorar parameters.yaml, backups, etc.
+│   └── core.yaml                      # CloudFormation template (ECS Fargate, ALB, IAM, CloudWatch)
 └── docs/
     ├── arquitectura.md                # arquitectura del sistema (simplificada)
     ├── arquitectura.drawio            # diagrama visual (5 capas, top-down)
@@ -217,19 +204,6 @@ uv run python -m etl.openmeteo_bronze \
 - Denormalización con `dim_estaciones` (lat/lon, municipio, altitud)
 - NULL nativo (nunca -99, NaN string, -1)
 - Outliers marcados pero conservados (auditoria)
-
-**Schema ejemplo:**
-```
-contaminantes_horario (Silver)
-├── station_id: string (PK)
-├── timestamp: timestamp (PK, UTC-6)
-├── zone: string
-├── contaminante: enum(O3, PM2.5, PM10, NO2, SO2)
-├── valor_ppb_o_ugm3: float
-├── is_valid: boolean
-├── metodo_medicion: string
-└── fecha_ingesta: timestamp
-```
 
 ### Gold: Features → Predictions
 
@@ -305,12 +279,6 @@ Si `data/raw/openmeteo/station_id=BJU/year=2023/openmeteo_BJU_2023.json` ya exis
 
 Seguro ejecutar múltiples veces sin duplicar datos.
 
-**Manejo de errores**
-
-- Reintentos automáticos con backoff exponencial (3 intentos, 5s entre intentos)
-- Si timeout (>60s): log de error, continúa con siguiente zona/año
-- Si HTTP 4xx o 5xx: log + estadística de fallo, no aborta pipeline
-
 **Variables descargadas**
 
 ```python
@@ -380,11 +348,6 @@ uv run python -m etl.openmeteo_bronze \
   --start-year 2021
 ```
 
-**Flags opcionales:**
-- `--end-year 2024`: Año final (por defecto: año actual)
-- `--overwrite`: Fuerza reingesta si ya existen archivos
-- `--dry-run`: Descarga sin guardar a disk
-
 **Output esperado:**
 ```
 ✓ Descargadas estaciones × años = JSON files
@@ -413,146 +376,6 @@ data/raw/openmeteo/
 │   │   └── openmeteo_XAL_2021.json
 │   └── ...
 └── ...
-```
-
-### Cada JSON contiene
-
-```json
-{
-  "_metadata": {
-    "_ingested_at": "2025-05-22T14:32:10+00:00",
-    "_source_url": "https://archive-api.open-meteo.com/v1/archive",
-    "_zone": "CE",
-    "_year": 2023,
-    "_hourly_variables": [
-      "temperature_2m", "relative_humidity_2m", ...
-    ],
-    "_latitude_requested": 19.3705,
-    "_longitude_requested": -99.1596,
-    "_latitude_actual": 19.37,
-    "_longitude_actual": -99.16
-  },
-  "latitude": 19.37,
-  "longitude": -99.16,
-  "elevation": 2250,
-  "generationtime_ms": 42,
-  "hourly": {
-    "time": [
-      "2023-01-01T00:00", "2023-01-01T01:00", ...
-    ],
-    "temperature_2m": [15.2, 14.8, 14.5, ...],
-    "relative_humidity_2m": [72, 75, 78, ...],
-    ...
-  },
-  "hourly_units": {
-    "temperature_2m": "°C",
-    "relative_humidity_2m": "%",
-    ...
-  }
-}
-```
-
----
-
-## Cómo Subir a Bronze (AWS S3)
-
-**Requisitos:** Bucket S3, AWS credentials con permisos S3, archivos en `data/raw/`.
-
-**Nota:** Bronze es una capa **sin procesamiento** — copia exacta de los archivos originales de `data/raw/` a S3.
-
-**Ejecución:**
-
-```bash
-# Configura credenciales AWS
-aws configure
-
-# Copia archivos a S3 (sin transformación)
-uv run python -m etl.bronze --bucket <your-bucket-name>
-
-```
-
-**Output esperado:**
-
-```
-INFO | ✓ Subido: archivo1.json → s3://<your-bucket-name>/air-sense-mx/bronze/archivo1.json
-INFO | ✓ Subido: archivo2.csv → s3://<your-bucket-name>/air-sense-mx/bronze/archivo2.csv
-INFO | Archivos subidos    : 2
-INFO | Bytes totales       : 1500.50 (1.50 MB)
-```
-
-**Estructura en S3:**
-
-```
-s3://<your-bucket-name>/air-sense-mx/bronze/
-├── archivo1.json
-├── archivo2.csv
-└── ...
-```
-
-### ⚠️ Troubleshooting: Error 404 en HeadObject
-
-**Síntoma:**
-```
-ERROR | Error subiendo data/raw/archivo.json: 
-An error occurred (404) when calling the HeadObject operation: Not Found
-```
-
-**Causas comunes:**
-
-1. **Bucket no existe o nombre incorrecto**
-   ```bash
-   aws s3 ls s3://<your-bucket-name>/
-   ```
-   - Si retorna "NoSuchBucket": crear bucket con `aws s3 mb s3://<your-bucket-name>`
-
-2. **Credenciales AWS inválidas o expiradas**
-   ```bash
-   aws sts get-caller-identity
-   ```
-   - Si falla: ejecutar `aws configure` y re-ingresar claves
-
-3. **Permisos insuficientes**
-   - Verificar que tu usuario IAM tiene:
-     - `s3:PutObject`
-     - `s3:GetObject`
-     - `s3:HeadObject`
-   - Ejemplo policy:
-   ```json
-   {
-     "Version": "2012-10-17",
-     "Statement": [
-       {
-         "Effect": "Allow",
-         "Action": ["s3:*"],
-         "Resource": ["arn:aws:s3:::your-bucket-name/*", "arn:aws:s3:::your-bucket-name"]
-       }
-     ]
-   }
-   ```
-
-4. **Bucket en región diferente**
-   - Verificar region del bucket:
-   ```bash
-   aws s3api get-bucket-location --bucket <your-bucket-name>
-   ```
-   - Configurar en `~/.aws/config` o con `--region` flag:
-   ```bash
-   uv run python -m etl.bronze --bucket <your-bucket-name> --region us-east-1
-   ```
-
-**Solución rápida (local first):**
-```bash
-# 1. Testear credenciales
-aws sts get-caller-identity
-
-# 2. Testear acceso a bucket
-aws s3 ls s3://<your-bucket-name>/
-
-# 3. Crear bucket si no existe
-aws s3 mb s3://<your-bucket-name> --region us-east-1
-
-# 4. Intentar subir nuevamente
-uv run python -m etl.bronze --bucket <your-bucket-name>
 ```
 
 ---
@@ -663,64 +486,20 @@ Desplegar AirSense MX a producción en AWS usando **Infrastructure as Code**.
 
 ```
 infra/
-├── README.md                  # Documentación completa
-├── core.yaml                  # CloudFormation template (EC2, ALB, S3, Lambda, etc.)
-├── parameters.example.yaml    # Parámetros de configuración (template)
-├── deploy.sh                  # Script de deployment
-├── rollback.sh                # Script de rollback
-├── Makefile                   # Comandos útiles
-└── .gitignore                 # Proteger parámetros/secretos
-```
-
-### Quick Start
-
-**1. Preparar parámetros:**
-
-```bash
-cp infra/parameters.example.yaml infra/parameters.yaml
-# Editar con VPC ID, Subnet IDs, Key Pair, etc.
-```
-
-**2. Validar template:**
-
-```bash
-make -C infra validate
-```
-
-**3. Deploy:**
-
-```bash
-make -C infra deploy-prod  # Producción
-# o
-make -C infra deploy-dev   # Desarrollo
-```
-
-**4. Monitoreo:**
-
-```bash
-make -C infra status ENV=prod
-make -C infra logs         # CloudWatch Streamlit logs
-make -C infra events ENV=prod  # Stack events
+├── README.md     # Documentación completa
+└── core.yaml     # CloudFormation template (ECS Fargate, ALB, IAM, CloudWatch)
 ```
 
 ### Recursos Creados
 
 | Recurso | Descripción | Costo |
 |---------|------------|-------|
-| **EC2 t3.small** | Streamlit app | $12/mes |
+| **ECS Fargate** | Streamlit app (512 CPU / 1024 MB) | ~$15/mes |
 | **ALB** | Load balancer | $7/mes |
-| **S3** | Data Lake (100 GB) | $2.30/mes |
-| **CloudWatch** | Logging 5 GB/mes | $2.50/mes |
-| **Lambda** | ETL batch (diario) | <$1/mes |
-| **Secrets Manager** | Credenciales | <$1/mes |
-| **Total estimado** | | **~$25/mes** |
+| **S3** | Data Lake existente (100 GB) | $2.30/mes |
+| **CloudWatch** | Logging 7 días retención | $2.50/mes |
+| **Total estimado** | | **~$27/mes** |
 
-### Referencias
-
-- Documentación completa: [infra/README.md](./infra/README.md)
-- CloudFormation template: [infra/core.yaml](./infra/core.yaml)
-
----
 
 ## Testing
 
@@ -762,8 +541,6 @@ uv run pytest tests/test_smoke.py -v
 
 ### Estándares
 
-Vea [.github/copilot-instructions.md](.github/copilot-instructions.md) para detalles completos.
-
 **Resumen:**
 - **Type hints** obligatorios (PEP 484)
 - **Google docstrings** en español
@@ -795,25 +572,6 @@ uv run pytest --cov=etl --cov=utils --cov-report=html
 
 Sistema centralizado (`utils/logging.py`) con **dual output** (stdout + archivo rotado) y contexto estructurado.
 
-### Configuración
-
-**Entry point (una sola vez):**
-
-```python
-from utils.logging import setup_logging
-
-setup_logging()  # Configura stdout + archivo rotado a medianoche
-```
-
-**En cada módulo:**
-
-```python
-from utils.logging import get_logger
-
-logger = get_logger(__name__)  # Variable de módulo
-logger.info("Evento", extra={"station_id": "BJU", "year": 2023})
-```
-
 ### Niveles
 
 - `DEBUG` → URLs, parámetros (detalle técnico)
@@ -833,55 +591,6 @@ logs/
 ├── airsense.log.2025-05-20
 └── ... (máx 7 archivos)
 ```
-
-Lectura:
-
-```bash
-tail -f logs/airsense.log          # en vivo
-grep "station_id=BJU" logs/airsense.log  # filtrar
-```
-
----
-
-## Roadmap
-
-### Fase 1: Bronze ✅ (En progreso)
-
-- [x] Ingesta Open-Meteo (estaciones, 2020-2024)
-- [ ] Ingesta SIMAT/RAMA (Excel wide, 2015-2024)
-- [ ] Ingesta PCAA (validación)
-
-### Fase 2: Silver (2–3 semanas)
-
-- [ ] Normalización timestamps (UTC-6)
-- [ ] Denormalización con `dim_estaciones`
-- [ ] Validación de NULL, outliers
-- [ ] Tests E2E
-
-### Fase 3: Gold + Predicción (3–4 semanas)
-
-- [ ] Feature engineering (lags, rolling, calendar features)
-- [ ] LightGBM baseline + SHAP
-- [ ] Evaluación vs. PCAA
-- [ ] Batch predictions (6-hourly)
-
-### Fase 4: App + Deployment (2–3 semanas)
-
-- [x] Dashboard Streamlit (3 tabs: monitoring, forecast, contingency) ✅
-- [x] Bedrock NLP (explicaciones para mortales) ✅
-- [x] Docker image + push ECR (preparado en core.yaml)
-- [x] CloudFormation IaC — EC2 t3.small, ALB, S3, Lambda, EventBridge ✅
-- [ ] Deploy a producción (requiere AWS account setup + Gustavo Gold)
-- [ ] Scheduled batch jobs (EventBridge cron 06:00 AM)
-
-### Fase 5: Producción (Final)
-
-- [ ] CI/CD GitHub Actions (pre-deploy validation)
-- [ ] Data contracts YAML (Silver/Gold)
-- [ ] Monitoreo CloudWatch Alarms
-- [ ] Rollback procedures documentados
-- [ ] Documentación técnica completa
-
 ---
 
 ## Declaración de Uso de IA
@@ -911,13 +620,5 @@ Este proyecto fue desarrollado por **humanos**, con **IA asistiendo en tareas es
 | Lead Data Science | Gustavo Robledo | Features, LightGBM, SHAP, Evaluation |
 
 **Programa:** Maestría en Data Science  
-**Proyecto Final:** Mayo 2026  
-
----
-
-
-
----
-
-**Last Updated:** 22 de mayo de 2026  
-**Status:** 🟡 En desarrollo (Fase 1 completada, Fase 2 en progreso)
+**Proyecto Final:** Mayo 2026 
+**Last Updated:** 23 de mayo de 2026  
