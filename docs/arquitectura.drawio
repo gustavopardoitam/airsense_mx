@@ -1,339 +1,152 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1"
-  connect="1" arrows="1" fold="1" page="1" pageScale="1"
-  pageWidth="1400" pageHeight="680" math="0" shadow="0">
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1020" math="0" shadow="0">
   <root>
-    <mxCell id="0" />
-    <mxCell id="1" parent="0" />
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
 
-    <!-- ===== TÍTULO ===== -->
-    <mxCell id="title" value="AirSense MX — Arquitectura del Sistema"
-      style="text;html=1;align=center;fontStyle=1;fontSize=18;fontColor=#1A237E;"
-      vertex="1" parent="1">
-      <mxGeometry x="20" y="15" width="1360" height="35" as="geometry" />
-    </mxCell>
-    <mxCell id="subtitle" value="Predicción de calidad del aire ZMVM · Bronze → Silver → Gold · Batch diario 06:00 AM UTC-6"
-      style="text;html=1;align=center;fontStyle=0;fontSize=11;fontColor=#546E7A;"
-      vertex="1" parent="1">
-      <mxGeometry x="20" y="48" width="1360" height="20" as="geometry" />
+    <!-- =========================================================
+         FUENTES DE DATOS
+    ========================================================== -->
+    <mxCell id="src1" value="SIMAT / RAMA&#xa;Excel anual (wide)&#xa;O3 · PM2.5 · PM10 · NO2 · SO2" style="rounded=1;whiteSpace=wrap;fillColor=#FFF3E0;strokeColor=#E65100;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="60" y="60" width="220" height="80" as="geometry"/>
     </mxCell>
 
-    <!-- ===== CAPA 1: INGESTA ===== -->
-    <mxCell id="c1" value="1. INGESTA DE DATOS"
-      style="swimlane;startSize=28;fillColor=#FFF3E0;strokeColor=#E65100;strokeWidth=2;fontStyle=1;fontSize=11;fontColor=#E65100;rounded=1;"
-      vertex="1" parent="1">
-      <mxGeometry x="20" y="80" width="220" height="490" as="geometry" />
+    <mxCell id="src2" value="Open-Meteo API&#xa;JSON horario&#xa;Temp · Presion · Viento · Radiacion" style="rounded=1;whiteSpace=wrap;fillColor=#FFF3E0;strokeColor=#E65100;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="320" y="60" width="220" height="80" as="geometry"/>
     </mxCell>
 
-    <mxCell id="simat" value="SIMAT / RAMA&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;Excel anual&lt;br/&gt;O&#x2083;, PM2.5, PM10, NO&#x2082;, SO&#x2082;&lt;br/&gt;aire.cdmx.gob.mx&lt;/font&gt;"
-      style="rounded=1;fillColor=#FFCCBC;strokeColor=#E65100;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c1">
-      <mxGeometry x="15" y="40" width="190" height="75" as="geometry" />
+    <mxCell id="src3" value="dim_estaciones.csv&#xa;Master data 5 zonas ZMVM&#xa;NO · NE · SE · SO · CE" style="rounded=1;whiteSpace=wrap;fillColor=#FFF3E0;strokeColor=#E65100;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="580" y="60" width="220" height="80" as="geometry"/>
     </mxCell>
 
-    <mxCell id="openmeteo" value="Open-Meteo API&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;JSON horario&lt;br/&gt;Temp, Presion, Viento&lt;br/&gt;5 centroides ZMVM&lt;/font&gt;"
-      style="rounded=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c1">
-      <mxGeometry x="15" y="130" width="190" height="75" as="geometry" />
+    <!-- =========================================================
+         ETL PIPELINE (Bronze → Silver)
+    ========================================================== -->
+    <mxCell id="etl" value="ETL Pipeline&#xa;etl/silver/rama_silver.py · openmeteo_silver.py&#xa;Bronze (raw · inmutable) → Silver (UTC-6 · long format · -99 → NULL · Parquet+Snappy)" style="rounded=1;whiteSpace=wrap;fillColor=#E3F2FD;strokeColor=#1565C0;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="60" y="220" width="740" height="80" as="geometry"/>
     </mxCell>
 
-    <mxCell id="dim" value="dim_estaciones.csv&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;Master data Git&lt;br/&gt;5 zonas: NO NE SE SO CE&lt;/font&gt;"
-      style="rounded=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c1">
-      <mxGeometry x="15" y="220" width="190" height="65" as="geometry" />
+    <!-- =========================================================
+         S3 DATA LAKE
+    ========================================================== -->
+    <mxCell id="lake" value="AWS S3 Data Lake&#xa;bronze/ · silver/ · gold/  —  Parquet + Snappy · Hive partitioning year/month&#xa;Athena + Glue Catalog" style="rounded=1;whiteSpace=wrap;fillColor=#E0F2F1;strokeColor=#00695C;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="60" y="380" width="740" height="80" as="geometry"/>
     </mxCell>
 
-    <mxCell id="trigger" value="Trigger 06:00 AM UTC-6&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;Cron / EventBridge&lt;br/&gt;Inicio pipeline diario&lt;/font&gt;"
-      style="rounded=1;fillColor=#FFF9C4;strokeColor=#F57F17;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c1">
-      <mxGeometry x="15" y="300" width="190" height="65" as="geometry" />
+    <!-- =========================================================
+         ML PIPELINE (batch diario)
+    ========================================================== -->
+    <mxCell id="ml" value="ML Pipeline  —  batch diario 06:00 AM&#xa;Feature Engineering · LightGBM Training · SHAP · Inference&#xa;Gold: predicciones 1-7 dias · P10/P90 · prob_contingencia · Semaforo" style="rounded=1;whiteSpace=wrap;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="60" y="540" width="740" height="80" as="geometry"/>
     </mxCell>
 
-    <mxCell id="c1-tech" value="Python 3.11 · requests · openpyxl"
-      style="text;html=1;align=center;fontSize=8;fontColor=#78909C;fontStyle=2;"
-      vertex="1" parent="c1">
-      <mxGeometry x="10" y="385" width="200" height="20" as="geometry" />
+    <!-- =========================================================
+         STREAMLIT APP
+    ========================================================== -->
+    <mxCell id="app" value="Streamlit App  —  EC2 t3.small&#xa;Dashboard · Pronostico 7 dias · Contingencias PCAA&#xa;Amazon Bedrock Claude Haiku (NLP) · cache 5 min" style="rounded=1;whiteSpace=wrap;fillColor=#FCE4EC;strokeColor=#880E4F;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="60" y="700" width="740" height="80" as="geometry"/>
     </mxCell>
 
-    <!-- ===== CAPA 2: ETL ===== -->
-    <mxCell id="c2" value="2. ETL PIPELINE"
-      style="swimlane;startSize=28;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=2;fontStyle=1;fontSize=11;fontColor=#1565C0;rounded=1;"
-      vertex="1" parent="1">
-      <mxGeometry x="265" y="80" width="220" height="490" as="geometry" />
+    <!-- =========================================================
+         USUARIOS
+    ========================================================== -->
+    <mxCell id="u1" value="Data Scientist&#xa;Metricas + SHAP" style="ellipse;whiteSpace=wrap;fillColor=#F5F5F5;strokeColor=#616161;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="60" y="870" width="180" height="60" as="geometry"/>
     </mxCell>
 
-    <mxCell id="bronze" value="Bronze&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;Datos raw · Inmutable&lt;br/&gt;etl/bronze.py&lt;br/&gt;JSON / Excel sin transformar&lt;/font&gt;"
-      style="rounded=1;fillColor=#FFE0B2;strokeColor=#FF6F00;strokeWidth=2;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c2">
-      <mxGeometry x="15" y="40" width="190" height="80" as="geometry" />
+    <mxCell id="u2" value="Operador ZMVM&#xa;Contingencias + alertas" style="ellipse;whiteSpace=wrap;fillColor=#F5F5F5;strokeColor=#616161;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="290" y="870" width="180" height="60" as="geometry"/>
     </mxCell>
 
-    <mxCell id="silver" value="Silver&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;Limpio · Tipificado · UTC-6&lt;br/&gt;etl/silver.py&lt;br/&gt;-99 &amp;rarr; NULL · Long format&lt;/font&gt;"
-      style="rounded=1;fillColor=#A5D6A7;strokeColor=#2E7D32;strokeWidth=2;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c2">
-      <mxGeometry x="15" y="140" width="190" height="80" as="geometry" />
+    <mxCell id="u3" value="Ciudadano&#xa;Pronostico + semaforo" style="ellipse;whiteSpace=wrap;fillColor=#F5F5F5;strokeColor=#616161;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="520" y="870" width="180" height="60" as="geometry"/>
     </mxCell>
 
-    <mxCell id="validaciones" value="Validaciones&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;Schemas · Duplicados&lt;br/&gt;Rangos · Station IDs&lt;br/&gt;53 tests · 85%+ cobertura&lt;/font&gt;"
-      style="rounded=1;fillColor=#C8E6C9;strokeColor=#1B5E20;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c2">
-      <mxGeometry x="15" y="240" width="190" height="80" as="geometry" />
+    <!-- =========================================================
+         INFRAESTRUCTURA (derecha, dashed)
+    ========================================================== -->
+    <mxCell id="secrets" value="AWS Secrets Manager&#xa;Credenciales · API keys" style="rounded=1;whiteSpace=wrap;fillColor=#ECEFF1;strokeColor=#455A64;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="880" y="540" width="200" height="60" as="geometry"/>
     </mxCell>
 
-    <mxCell id="parquet" value="Parquet + Snappy&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;Particion year/month&lt;br/&gt;Hive format · Athena ready&lt;/font&gt;"
-      style="rounded=1;fillColor=#E8EAF6;strokeColor=#3949AB;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c2">
-      <mxGeometry x="15" y="340" width="190" height="65" as="geometry" />
+    <mxCell id="docker" value="Docker&#xa;Imagen contenedor" style="rounded=1;whiteSpace=wrap;fillColor=#ECEFF1;strokeColor=#455A64;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="880" y="620" width="200" height="60" as="geometry"/>
     </mxCell>
 
-    <mxCell id="c2-tech" value="pandas · PyArrow · awswrangler"
-      style="text;html=1;align=center;fontSize=8;fontColor=#78909C;fontStyle=2;"
-      vertex="1" parent="c2">
-      <mxGeometry x="10" y="425" width="200" height="20" as="geometry" />
+    <mxCell id="cfn" value="CloudFormation&#xa;infra/core.yaml  —  IaC" style="rounded=1;whiteSpace=wrap;fillColor=#ECEFF1;strokeColor=#455A64;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="880" y="700" width="200" height="60" as="geometry"/>
     </mxCell>
 
-    <!-- ===== CAPA 3: DATA LAKE ===== -->
-    <mxCell id="c3" value="3. DATA LAKE (AWS S3)"
-      style="swimlane;startSize=28;fillColor=#E0F2F1;strokeColor=#00695C;strokeWidth=2;fontStyle=1;fontSize=11;fontColor=#00695C;rounded=1;"
-      vertex="1" parent="1">
-      <mxGeometry x="510" y="80" width="220" height="490" as="geometry" />
+    <mxCell id="cw" value="CloudWatch Logs&#xa;Logging estructurado" style="rounded=1;whiteSpace=wrap;fillColor=#ECEFF1;strokeColor=#455A64;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="880" y="780" width="200" height="60" as="geometry"/>
     </mxCell>
 
-    <mxCell id="s3-bronze" value="bronze/&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;rama/ · openmeteo/&lt;br/&gt;Raw · Read-only&lt;/font&gt;"
-      style="rounded=1;fillColor=#FFE0B2;strokeColor=#FF6F00;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c3">
-      <mxGeometry x="15" y="40" width="190" height="65" as="geometry" />
+    <!-- =========================================================
+         EDGES: Flujo principal (solido)
+    ========================================================== -->
+    <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#E65100;" edge="1" source="src1" target="etl" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
 
-    <mxCell id="s3-silver" value="silver/&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;observaciones_horarias/&lt;br/&gt;meteo_horario/&lt;/font&gt;"
-      style="rounded=1;fillColor=#A5D6A7;strokeColor=#2E7D32;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c3">
-      <mxGeometry x="15" y="120" width="190" height="65" as="geometry" />
+    <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#E65100;" edge="1" source="src2" target="etl" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
 
-    <mxCell id="s3-gold" value="gold/&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;predicciones_diarias/&lt;br/&gt;Horizonte 1-7 dias&lt;/font&gt;"
-      style="rounded=1;fillColor=#FFF8E1;strokeColor=#F9A825;strokeWidth=2;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c3">
-      <mxGeometry x="15" y="200" width="190" height="65" as="geometry" />
+    <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#E65100;" edge="1" source="src3" target="etl" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
 
-    <mxCell id="athena" value="Athena + Glue Catalog&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;SQL serverless&lt;br/&gt;Queries ad-hoc&lt;/font&gt;"
-      style="rounded=1;fillColor=#B2EBF2;strokeColor=#006064;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c3">
-      <mxGeometry x="15" y="285" width="190" height="65" as="geometry" />
+    <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#1565C0;" edge="1" source="etl" target="lake" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
 
-    <mxCell id="c3-tech" value="s3://itam-analytics-antonio/air-sense-mx/"
-      style="text;html=1;align=center;fontSize=8;fontColor=#78909C;fontStyle=2;"
-      vertex="1" parent="c3">
-      <mxGeometry x="10" y="370" width="200" height="20" as="geometry" />
+    <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#00695C;" edge="1" source="lake" target="ml" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
 
-    <!-- ===== CAPA 4: ML ===== -->
-    <mxCell id="c4" value="4. ML PIPELINE"
-      style="swimlane;startSize=28;fillColor=#F3E5F5;strokeColor=#6A1B9A;strokeWidth=2;fontStyle=1;fontSize=11;fontColor=#6A1B9A;rounded=1;"
-      vertex="1" parent="1">
-      <mxGeometry x="755" y="80" width="220" height="490" as="geometry" />
+    <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#6A1B9A;" edge="1" source="ml" target="app" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
 
-    <mxCell id="features" value="Feature Engineering&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;Lags 1/3/7 dias&lt;br/&gt;Rolling mean 7/30 dias&lt;br/&gt;Calendar features&lt;/font&gt;"
-      style="rounded=1;fillColor=#CE93D8;strokeColor=#6A1B9A;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c4">
-      <mxGeometry x="15" y="40" width="190" height="80" as="geometry" />
+    <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#880E4F;" edge="1" source="app" target="u1" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
 
-    <mxCell id="training" value="LightGBM Training&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;Split temporal (no aleatorio)&lt;br/&gt;MAE/RMSE vs naive baseline&lt;br/&gt;SHAP validation&lt;/font&gt;"
-      style="rounded=1;fillColor=#E1BEE7;strokeColor=#6A1B9A;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c4">
-      <mxGeometry x="15" y="140" width="190" height="80" as="geometry" />
+    <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#880E4F;" edge="1" source="app" target="u2" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
 
-    <mxCell id="inference" value="Inference · Gold Output&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;5 zonas x 5 contaminantes&lt;br/&gt;7 horizontes · P10/P90&lt;br/&gt;Semaforo PCAA&lt;/font&gt;"
-      style="rounded=1;fillColor=#FFF8E1;strokeColor=#F9A825;strokeWidth=2;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c4">
-      <mxGeometry x="15" y="240" width="190" height="80" as="geometry" />
+    <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;strokeWidth=2;strokeColor=#880E4F;" edge="1" source="app" target="u3" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
 
-    <mxCell id="c4-tech" value="LightGBM · SHAP · scikit-learn · joblib"
-      style="text;html=1;align=center;fontSize=8;fontColor=#78909C;fontStyle=2;"
-      vertex="1" parent="c4">
-      <mxGeometry x="10" y="340" width="200" height="20" as="geometry" />
-    </mxCell>
-
-    <!-- ===== CAPA 5: APP + USUARIOS ===== -->
-    <mxCell id="c5" value="5. APP + USUARIOS"
-      style="swimlane;startSize=28;fillColor=#FCE4EC;strokeColor=#880E4F;strokeWidth=2;fontStyle=1;fontSize=11;fontColor=#880E4F;rounded=1;"
-      vertex="1" parent="1">
-      <mxGeometry x="1000" y="80" width="380" height="490" as="geometry" />
-    </mxCell>
-
-    <mxCell id="streamlit" value="Streamlit App (EC2 t3.small)&lt;br/&gt;&lt;font style=&apos;font-size:9px;font-weight:normal;&apos;&gt;@st.cache_data(ttl=300)&lt;br/&gt;Lee Gold de S3 cada 5 min&lt;br/&gt;ALB + HTTPS&lt;/font&gt;"
-      style="rounded=1;fillColor=#F8BBD9;strokeColor=#880E4F;strokeWidth=2;fontSize=10;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c5">
-      <mxGeometry x="15" y="40" width="350" height="70" as="geometry" />
-    </mxCell>
-
-    <mxCell id="page-dash" value="Dashboard&lt;br/&gt;&lt;font style=&apos;font-size:8px;&apos;&gt;Hoy · Semaforo por zona&lt;/font&gt;"
-      style="rounded=1;fillColor=#FCE4EC;strokeColor=#C62828;fontSize=9;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c5">
-      <mxGeometry x="15" y="130" width="105" height="55" as="geometry" />
-    </mxCell>
-
-    <mxCell id="page-pron" value="Pronostico&lt;br/&gt;&lt;font style=&apos;font-size:8px;&apos;&gt;7 dias · Plotly&lt;/font&gt;"
-      style="rounded=1;fillColor=#FCE4EC;strokeColor=#C62828;fontSize=9;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c5">
-      <mxGeometry x="130" y="130" width="105" height="55" as="geometry" />
-    </mxCell>
-
-    <mxCell id="page-cont" value="Contingencias&lt;br/&gt;&lt;font style=&apos;font-size:8px;&apos;&gt;Riesgo PCAA · Bedrock&lt;/font&gt;"
-      style="rounded=1;fillColor=#FCE4EC;strokeColor=#C62828;fontSize=9;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c5">
-      <mxGeometry x="245" y="130" width="120" height="55" as="geometry" />
-    </mxCell>
-
-    <mxCell id="bedrock" value="Amazon Bedrock&lt;br/&gt;&lt;font style=&apos;font-size:8px;&apos;&gt;Claude Haiku · NLP&lt;br/&gt;Explicaciones en espanol&lt;br/&gt;Fallback estatico&lt;/font&gt;"
-      style="rounded=1;fillColor=#C8E6C9;strokeColor=#1B5E20;fontSize=9;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c5">
-      <mxGeometry x="15" y="205" width="165" height="70" as="geometry" />
-    </mxCell>
-
-    <mxCell id="cloudwatch" value="CloudWatch + Secrets&lt;br/&gt;&lt;font style=&apos;font-size:8px;&apos;&gt;Logs estructurados&lt;br/&gt;Credenciales rotacion&lt;/font&gt;"
-      style="rounded=1;fillColor=#B2EBF2;strokeColor=#006064;fontSize=9;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c5">
-      <mxGeometry x="190" y="205" width="175" height="70" as="geometry" />
-    </mxCell>
-
-    <mxCell id="user1" value="Data Scientist&lt;br/&gt;&lt;font style=&apos;font-size:8px;&apos;&gt;Monitoreo modelo&lt;br/&gt;SHAP · Feedback&lt;/font&gt;"
-      style="rounded=1;fillColor=#FFCDD2;strokeColor=#C62828;fontSize=9;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c5">
-      <mxGeometry x="15" y="295" width="110" height="65" as="geometry" />
-    </mxCell>
-
-    <mxCell id="user2" value="Operador ZMVM&lt;br/&gt;&lt;font style=&apos;font-size:8px;&apos;&gt;Alertas de riesgo&lt;br/&gt;Fase contingencia&lt;/font&gt;"
-      style="rounded=1;fillColor=#FFCDD2;strokeColor=#C62828;fontSize=9;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c5">
-      <mxGeometry x="135" y="295" width="110" height="65" as="geometry" />
-    </mxCell>
-
-    <mxCell id="user3" value="Ciudadano&lt;br/&gt;&lt;font style=&apos;font-size:8px;&apos;&gt;Consulta publica&lt;br/&gt;Recomendaciones&lt;/font&gt;"
-      style="rounded=1;fillColor=#FFCDD2;strokeColor=#C62828;fontSize=9;fontStyle=1;align=center;html=1;"
-      vertex="1" parent="c5">
-      <mxGeometry x="255" y="295" width="110" height="65" as="geometry" />
-    </mxCell>
-
-    <mxCell id="c5-tech" value="Streamlit · Plotly · boto3 · CloudFormation IaC"
-      style="text;html=1;align=center;fontSize=8;fontColor=#78909C;fontStyle=2;"
-      vertex="1" parent="c5">
-      <mxGeometry x="10" y="375" width="360" height="20" as="geometry" />
-    </mxCell>
-
-    <!-- ===== FLECHAS PRINCIPALES ===== -->
-    <!-- Ingesta → ETL -->
-    <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;strokeColor=#546E7A;endArrow=open;endFill=1;"
-      edge="1" source="simat" target="bronze" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;strokeColor=#546E7A;endArrow=open;endFill=1;"
-      edge="1" source="openmeteo" target="bronze" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=1;strokeColor=#546E7A;dashed=1;endArrow=open;endFill=1;"
-      edge="1" source="dim" target="silver" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-
-    <!-- ETL Bronze → Silver -->
-    <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;strokeColor=#2E7D32;endArrow=open;endFill=1;"
-      edge="1" source="bronze" target="silver" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-
-    <!-- Silver → S3 -->
-    <mxCell id="e5" value="write Parquet" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;strokeColor=#00695C;fontSize=8;endArrow=open;endFill=1;"
-      edge="1" source="silver" target="s3-silver" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-
-    <!-- S3 Silver → ML Training -->
-    <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;strokeColor=#6A1B9A;endArrow=open;endFill=1;"
-      edge="1" source="s3-silver" target="features" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-
-    <!-- ML → Gold en S3 -->
-    <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;strokeColor=#F9A825;endArrow=open;endFill=1;"
-      edge="1" source="inference" target="s3-gold" parent="1">
+    <!-- Feedback loop: Data Scientist → ML (dashed rojo, lado izquierdo) -->
+    <mxCell id="e10" value="feedback" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#C62828;strokeWidth=2;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;" edge="1" source="u1" target="ml" parent="1">
       <mxGeometry relative="1" as="geometry">
         <Array as="points">
-          <mxPoint x="865" y="340" />
-          <mxPoint x="620" y="340" />
+          <mxPoint x="30" y="900"/>
+          <mxPoint x="30" y="580"/>
         </Array>
       </mxGeometry>
     </mxCell>
 
-    <!-- Gold S3 → Streamlit -->
-    <mxCell id="e8" value="cache 5 min" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;strokeColor=#880E4F;fontSize=8;endArrow=open;endFill=1;"
-      edge="1" source="s3-gold" target="streamlit" parent="1">
-      <mxGeometry relative="1" as="geometry" />
+    <!-- =========================================================
+         EDGES: Infraestructura (dashed gris)
+    ========================================================== -->
+    <mxCell id="e11" value="credenciales" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#455A64;strokeWidth=1;fontSize=10;" edge="1" source="secrets" target="app" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
 
-    <!-- Streamlit → Pages -->
-    <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=1;strokeColor=#880E4F;endArrow=open;endFill=1;"
-      edge="1" source="streamlit" target="page-dash" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=1;strokeColor=#880E4F;endArrow=open;endFill=1;"
-      edge="1" source="streamlit" target="page-pron" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=1;strokeColor=#880E4F;endArrow=open;endFill=1;"
-      edge="1" source="streamlit" target="page-cont" parent="1">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="e12" value="imagen Docker" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#455A64;strokeWidth=1;fontSize=10;" edge="1" source="docker" target="app" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
 
-    <!-- Contingencias → Bedrock -->
-    <mxCell id="e12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=1;strokeColor=#1B5E20;dashed=1;endArrow=open;endFill=1;"
-      edge="1" source="page-cont" target="bedrock" parent="1">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="e13" value="despliega" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#455A64;strokeWidth=1;fontSize=10;" edge="1" source="cfn" target="app" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
 
-    <!-- Feedback loop: User1 → Training (dashed red) -->
-    <mxCell id="e13" value="feedback" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=1;strokeColor=#C62828;dashed=1;fontSize=8;endArrow=open;endFill=1;"
-      edge="1" source="user1" target="training" parent="1">
-      <mxGeometry relative="1" as="geometry">
-        <Array as="points">
-          <mxPoint x="1060" y="590" />
-          <mxPoint x="865" y="590" />
-          <mxPoint x="865" y="195" />
-        </Array>
-      </mxGeometry>
-    </mxCell>
-
-    <!-- ===== LEYENDA ===== -->
-    <mxCell id="legend-bg" value=""
-      style="rounded=1;fillColor=#F5F5F5;strokeColor=#CFD8DC;strokeWidth=1;"
-      vertex="1" parent="1">
-      <mxGeometry x="20" y="590" width="1360" height="70" as="geometry" />
-    </mxCell>
-    <mxCell id="legend-title" value="PIPELINE:"
-      style="text;html=1;align=left;fontSize=9;fontStyle=1;fontColor=#37474F;"
-      vertex="1" parent="1">
-      <mxGeometry x="35" y="598" width="70" height="20" as="geometry" />
-    </mxCell>
-    <mxCell id="legend-flow" value="SIMAT / Open-Meteo  &#x2192;  Bronze (raw)  &#x2192;  Silver (clean, UTC-6, long)  &#x2192;  S3 Parquet/Hive  &#x2192;  LightGBM Training  &#x2192;  Gold (P10/P90/Semaforo)  &#x2192;  Streamlit EC2"
-      style="text;html=1;align=left;fontSize=9;fontColor=#37474F;"
-      vertex="1" parent="1">
-      <mxGeometry x="105" y="598" width="1260" height="20" as="geometry" />
-    </mxCell>
-    <mxCell id="legend-tech" value="TECH: Python 3.11  &#x2022;  pandas / PyArrow / awswrangler  &#x2022;  LightGBM / SHAP  &#x2022;  Streamlit / Plotly / boto3  &#x2022;  AWS S3 / Athena / Bedrock / CloudWatch / CloudFormation"
-      style="text;html=1;align=left;fontSize=9;fontColor=#546E7A;"
-      vertex="1" parent="1">
-      <mxGeometry x="35" y="622" width="1330" height="20" as="geometry" />
-    </mxCell>
-    <mxCell id="legend-compliance" value="CALIDAD: Ruff 0 errores  &#x2022;  53 tests (85%+ cobertura)  &#x2022;  Logging CloudWatch  &#x2022;  IaC CloudFormation  &#x2022;  uv lock determinista"
-      style="text;html=1;align=left;fontSize=9;fontColor=#546E7A;"
-      vertex="1" parent="1">
-      <mxGeometry x="35" y="642" width="1330" height="14" as="geometry" />
+    <mxCell id="e14" value="logs" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#455A64;strokeWidth=1;fontSize=10;" edge="1" source="cw" target="app" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
 
   </root>

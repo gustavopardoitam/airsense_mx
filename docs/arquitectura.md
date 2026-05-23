@@ -92,6 +92,50 @@ graph LR
 
 ---
 
+## Capa de Visualización — Streamlit
+
+Desplegada en **EC2 t3.small**, sirve tres páginas independientes. La lógica de negocio está separada de la capa de presentación siguiendo el patrón `views/` + `components/` + `data/` + `models/`.
+
+### Páginas
+
+| Página | Archivo | Qué muestra |
+|--------|---------|-------------|
+| **Dashboard** | `app/views/dashboard.py` | Semáforo de calidad del aire hoy por zona (5 zonas ZMVM) |
+| **Pronóstico** | `app/views/pronostico.py` | Predicciones horarias 1-7 días con bandas de incertidumbre P10/P90 |
+| **Contingencias** | `app/views/contingencias.py` | Riesgo PCAA por contaminante + explicaciones NLP generadas por Bedrock |
+
+### Módulos internos
+
+| Módulo | Responsabilidad |
+|--------|----------------|
+| `app/main.py` | Entry point; enruta hacia `app/views/` (sin auto-detección de sidebar) |
+| `app/config.py` | Constantes de UI: colores semáforo, nombres de zonas/contaminantes, umbrales PCAA |
+| `app/data/s3_loader.py` | Carga Gold Parquet desde S3; `@st.cache_data(ttl=300)`; retorna `DataFrame` vacío si Gold no está disponible |
+| `app/models/risk_analyzer.py` | Lógica de negocio: calcula semáforo y nivel de contingencia por contaminante |
+| `app/models/bedrock_explainer.py` | Llama a Amazon Bedrock Claude Haiku; fallback estático en español si Bedrock falla |
+| `app/components/badges.py` | Badges HTML de semáforo (Buena / Aceptable / Mala / Muy mala / Extremadamente mala) |
+| `app/components/cards.py` | Tarjetas de métricas con valor + categoría legible |
+| `app/components/charts.py` | Gráficas Plotly: línea temporal, barras por zona, heatmap contaminantes |
+
+### Colores semáforo (PCAA)
+
+| Categoría | Color | Hex |
+|-----------|-------|-----|
+| Buena | Verde | `#2ECC71` |
+| Aceptable | Amarillo | `#F1C40F` |
+| Mala | Naranja | `#E67E22` |
+| Muy mala | Rojo | `#E74C3C` |
+| Extremadamente mala | Morado | `#8E44AD` |
+
+### Principios de diseño
+
+- **Idioma:** Español mexicano; sin tecnicismos; "Calidad: **Mala** — Evitar actividades al aire libre"
+- **Caché:** `@st.cache_data(ttl=300)` en todas las lecturas de S3 (5 min)
+- **Degradación:** Si Gold no está disponible en S3, la app muestra estado vacío sin errores ni stack traces
+- **Configuración:** `.streamlit/config.toml` — tema oscuro, `primaryColor=#2C7BB6`, `headless=true`, `port=8501`
+
+---
+
 ## Decisiones de Diseño
 
 | Decisión | Elegido | Descartado | Razón |
