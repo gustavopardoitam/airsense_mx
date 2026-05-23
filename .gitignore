@@ -88,6 +88,7 @@ docker-compose.override.yml
 secrets.json
 
 .github/prompts/*
+silver_etl_generation.prompt.md
 
 # Ignore data files by default
 data/*
