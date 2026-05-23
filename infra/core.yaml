@@ -1,127 +1,113 @@
 AWSTemplateFormatVersion: '2010-09-09'
-
-Description: |
-  AirSense MX — Infrastructure as Code (CloudFormation)
-  Depliega: EC2 t3.small, ALB, S3 Data Lake, CloudWatch, Secrets Manager, Lambda, EventBridge
+Description: >
+  AirSense MX — Infraestructura completa.
+  Despliega ECS Fargate con Streamlit, ALB, S3 Data Lake,
+  Secrets Manager, IAM y CloudWatch.
   Autores: Antonio Esparza, Gustavo Pardo | Mayo 2026
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PARAMETERS
+# ─────────────────────────────────────────────────────────────────────────────
 Parameters:
-  Environment:
-    Type: String
-    Default: dev
-    AllowedValues: [dev, prod]
-    Description: "Ambiente: dev (testing) o prod (producción)"
-
-  AppName:
-    Type: String
-    Default: airsense-mx
-    Description: "Nombre base de la aplicación"
-
-  InstanceType:
-    Type: String
-    Default: t3.small
-    AllowedValues: [t3.micro, t3.small, t3.medium]
-    Description: "Tipo de instancia EC2"
-
-  KeyName:
-    Type: String
-    Description: "EC2 Key Pair (para SSH)"
 
   VpcId:
     Type: AWS::EC2::VPC::Id
-    Description: "VPC ID donde desplegar la app"
+    Description: VPC donde se desplegará la aplicación.
 
   SubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
-    Description: "Subnets para ALB y EC2 (mínimo 2)"
+    Description: Al menos dos subnets en diferentes AZs (para ALB y ECS).
 
-Metadata:
-  AWS::CloudFormation::Interface:
-    ParameterGroups:
-      - Label:
-          default: "Configuración General"
-        Parameters:
-          - Environment
-          - AppName
-      - Label:
-          default: "EC2"
-        Parameters:
-          - InstanceType
-          - KeyName
-      - Label:
-          default: "Networking"
-        Parameters:
-          - VpcId
-          - SubnetIds
+  ImageUri:
+    Type: String
+    Description: URI completo de la imagen ECR para el contenedor Streamlit.
 
-Mappings:
-  RegionMap:
-    us-east-1:
-      AMI: ami-0c55b159cbfafe1f0  # Amazon Linux 2
-    us-west-2:
-      AMI: ami-0d1cd67c26f5fca19
-    eu-west-1:
-      AMI: ami-0d71ea30463e0ff8d
+  ServiceName:
+    Type: String
+    Default: airsense-mx
+    MaxLength: 20
+    Description: Prefijo para nombrar todos los recursos.
 
+  DesiredCount:
+    Type: Number
+    Default: 1
+    MinValue: 1
+    Description: Número de tareas Fargate a mantener activas.
+
+  Cpu:
+    Type: String
+    Default: '512'
+    AllowedValues: ['256', '512', '1024', '2048']
+    Description: Unidades de CPU para la tarea Fargate.
+
+  Memory:
+    Type: String
+    Default: '1024'
+    AllowedValues: ['512', '1024', '2048', '4096']
+    Description: Memoria en MiB para la tarea Fargate.
+
+  LogRetentionDays:
+    Type: Number
+    Default: 7
+    AllowedValues: [1, 3, 5, 7, 14, 30]
+    Description: Retención de logs en CloudWatch (días).
+
+  S3BucketName:
+    Type: String
+    Default: ''
+    Description: Nombre del bucket S3. Si vacío, se crea uno nuevo automáticamente.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CONDITIONS
+# ─────────────────────────────────────────────────────────────────────────────
+Conditions:
+  CreateBucket: !Equals [!Ref S3BucketName, '']
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RESOURCES
+# ─────────────────────────────────────────────────────────────────────────────
 Resources:
-  # ============================================================================
-  # SECURITY GROUPS
-  # ============================================================================
 
-  ALBSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: "ALB security group — HTTP/HTTPS"
-      VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: 0.0.0.0/0
-      Tags:
-        - Key: Name
-          Value: !Sub "${AppName}-alb-sg"
+  # ═══════════════════════════════════════════════════════════════════════════
+  # IAM Roles
+  # ═══════════════════════════════════════════════════════════════════════════
 
-  EC2SecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: "EC2 security group — app traffic"
-      VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 8501
-          ToPort: 8501
-          SourceSecurityGroupId: !Ref ALBSecurityGroup
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-      Tags:
-        - Key: Name
-          Value: !Sub "${AppName}-ec2-sg"
-
-  # ============================================================================
-  # IAM ROLES
-  # ============================================================================
-
-  EC2Role:
+  TaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub '${ServiceName}-execution-role'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
-              Service: ec2.amazonaws.com
+              Service: ecs-tasks.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
       Policies:
-        - PolicyName: S3DataLakeAccess
+        - PolicyName: SecretsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref AppSecret
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ServiceName}-task-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AppPolicy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -130,293 +116,228 @@ Resources:
                   - s3:GetObject
                   - s3:ListBucket
                 Resource:
-                  - !Sub "arn:aws:s3:::${DataLakeBucket}"
-                  - !Sub "arn:aws:s3:::${DataLakeBucket}/*"
-        - PolicyName: SecretsManagerAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - secretsmanager:GetSecretValue
-                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AppName}/*"
-        - PolicyName: CloudWatchLogs
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:PutLogEvents
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/airsense-mx/*"
-        - PolicyName: BedrockAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
+                  - !If [CreateBucket, !GetAtt DataLakeBucket.Arn, !Sub 'arn:aws:s3:::${S3BucketName}']
+                  - !If [CreateBucket, !Sub '${DataLakeBucket.Arn}/*', !Sub 'arn:aws:s3:::${S3BucketName}/*']
               - Effect: Allow
                 Action:
                   - bedrock:InvokeModel
-                Resource: !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0"
-
-  EC2InstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Roles:
-        - !Ref EC2Role
-
-  LambdaRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        - PolicyName: ETLExecute
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
+                Resource: !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0'
               - Effect: Allow
                 Action:
-                  - s3:*
-                  - glue:*
-                  - athena:*
-                Resource: "*"
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref AppSecret
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: '*'
 
-  # ============================================================================
-  # S3 DATA LAKE
-  # ============================================================================
+  # ═══════════════════════════════════════════════════════════════════════════
+  # S3 Data Lake
+  # ═══════════════════════════════════════════════════════════════════════════
 
   DataLakeBucket:
     Type: AWS::S3::Bucket
+    Condition: CreateBucket
     Properties:
-      BucketName: !Sub "${AppName}-${Environment}-data-lake-${AWS::AccountId}"
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
-      VersioningConfiguration:
-        Status: Enabled
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
-      LifecycleConfiguration:
-        Rules:
-          - Id: DeleteIncompleteMultipartUploads
-            Status: Enabled
-            AbortIncompleteMultipartUpload:
-              DaysAfterInitiation: 7
       Tags:
-        - Key: Name
-          Value: !Sub "${AppName}-data-lake"
-        - Key: Environment
-          Value: !Ref Environment
+        - Key: app
+          Value: !Ref ServiceName
 
-  # ============================================================================
-  # CLOUDWATCH LOGS
-  # ============================================================================
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Secrets Manager
+  # ═══════════════════════════════════════════════════════════════════════════
 
-  StreamlitLogGroup:
+  AppSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Name: !Sub '${ServiceName}/app'
+      Description: Configuración y API keys de AirSense MX.
+      SecretString: !Sub |
+        {
+          "bedrock_model_id": "anthropic.claude-3-5-haiku-20241022-v1:0",
+          "openmeteo_api_url": "https://archive-api.open-meteo.com/v1/archive"
+        }
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ECS Cluster + CloudWatch
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub '${ServiceName}-cluster'
+      CapacityProviders:
+        - FARGATE
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+
+  LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/airsense-mx/streamlit"
-      RetentionInDays: 7
+      LogGroupName: !Sub '/ecs/${ServiceName}'
+      RetentionInDays: !Ref LogRetentionDays
 
-  ETLLogGroup:
-    Type: AWS::Logs::LogGroup
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Networking — Security Groups
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      LogGroupName: !Sub "/airsense-mx/etl"
-      RetentionInDays: 7
+      GroupDescription: !Sub 'ALB HTTP - ${ServiceName}'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '0.0.0.0/0'
+          Description: HTTP desde internet
 
-  # ============================================================================
-  # EC2 INSTANCE
-  # ============================================================================
-
-  StreamlitInstance:
-    Type: AWS::EC2::Instance
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
-      InstanceType: !Ref InstanceType
-      KeyName: !Ref KeyName
-      SecurityGroupIds:
-        - !Ref EC2SecurityGroup
-      IamInstanceProfile: !Ref EC2InstanceProfile
-      SubnetId: !Select [0, !Ref SubnetIds]
-      UserData:
-        Fn::Base64: |
-          #!/bin/bash
-          set -e
-          
-          # Actualizar sistema
-          yum update -y
-          yum install -y docker python3.11 git
-          
-          # Iniciar Docker
-          systemctl start docker
-          systemctl enable docker
-          usermod -aG docker ec2-user
-          
-          # Clonar repositorio
-          cd /opt
-          git clone https://github.com/gustavopardoitam/airsense_mx.git
-          cd airsense_mx
-          
-          # Crear directorio de logs
-          mkdir -p logs
-          
-          # Docker Compose (Streamlit)
-          docker run -d \
-            --name streamlit-app \
-            -p 8501:8501 \
-            -e AWS_DEFAULT_REGION=us-east-1 \
-            -v /opt/airsense_mx:/app \
-            -w /app \
-            python:3.11 \
-            bash -c "pip install -r requirements.txt && streamlit run app/main.py"
-          
-          # CloudWatch agent setup
-          yum install -y amazon-cloudwatch-agent
-          
-          echo "✓ Streamlit deploy complete"
-      Tags:
-        - Key: Name
-          Value: !Sub "${AppName}-streamlit"
-        - Key: Environment
-          Value: !Ref Environment
+      GroupDescription: !Sub 'ECS tasks - ${ServiceName}'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8501
+          ToPort: 8501
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          Description: Tráfico ALB a Streamlit
 
-  # ============================================================================
-  # APPLICATION LOAD BALANCER
-  # ============================================================================
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ALB + Target Group + Listener
+  # ═══════════════════════════════════════════════════════════════════════════
 
-  ApplicationLoadBalancer:
+  ALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: !Sub "${AppName}-alb"
+      Name: !Sub '${ServiceName}-alb'
+      Scheme: internet-facing
+      Type: application
       Subnets: !Ref SubnetIds
       SecurityGroups:
         - !Ref ALBSecurityGroup
-      Tags:
-        - Key: Name
-          Value: !Sub "${AppName}-alb"
 
-  StreamlitTargetGroup:
+  TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: !Sub "${AppName}-tg"
-      Port: 8501
+      Name: !Sub '${ServiceName}-tg'
       Protocol: HTTP
+      Port: 8501
       VpcId: !Ref VpcId
-      HealthCheckPath: /
+      TargetType: ip
+      HealthCheckPath: /_stcore/health
+      HealthCheckProtocol: HTTP
       HealthCheckIntervalSeconds: 30
-      HealthCheckTimeoutSeconds: 5
+      HealthCheckTimeoutSeconds: 10
       HealthyThresholdCount: 2
       UnhealthyThresholdCount: 3
-      TargetType: instance
-      Targets:
-        - Id: !Ref StreamlitInstance
-          Port: 8501
 
-  ALBListener:
+  Listener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      LoadBalancerArn: !GetAtt ApplicationLoadBalancer.LoadBalancerArn
+      LoadBalancerArn: !Ref ALB
       Port: 80
       Protocol: HTTP
       DefaultActions:
         - Type: forward
-          TargetGroupArn: !GetAtt StreamlitTargetGroup.TargetGroupArn
+          TargetGroupArn: !Ref TargetGroup
 
-  # ============================================================================
-  # LAMBDA + EVENTBRIDGE (ETL SCHEDULER)
-  # ============================================================================
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ECS Task Definition + Service
+  # ═══════════════════════════════════════════════════════════════════════════
 
-  ETLLambda:
-    Type: AWS::Lambda::Function
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
     Properties:
-      FunctionName: !Sub "${AppName}-etl-batch"
-      Runtime: python3.11
-      Handler: index.handler
-      Role: !GetAtt LambdaRole.Arn
-      Timeout: 3600
-      Environment:
-        Variables:
-          DATA_LAKE_BUCKET: !Ref DataLakeBucket
-          ENVIRONMENT: !Ref Environment
-      Code:
-        ZipFile: |
-          import json
-          def handler(event, context):
-              print(f"ETL batch job started: {event}")
-              # TODO: Implementar lógica ETL (Bronze → Silver)
-              return {'statusCode': 200, 'body': json.dumps('ETL batch complete')}
+      Family: !Ref ServiceName
+      Cpu: !Ref Cpu
+      Memory: !Ref Memory
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: app
+          Image: !Ref ImageUri
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8501
+              Protocol: tcp
+          Environment:
+            - Name: AWS_DEFAULT_REGION
+              Value: !Ref AWS::Region
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - curl -f http://localhost:8501/_stcore/health || exit 1
+            Interval: 30
+            Timeout: 10
+            Retries: 3
+            StartPeriod: 60
 
-  ETLScheduleRule:
-    Type: AWS::Events::Rule
+  ECSService:
+    Type: AWS::ECS::Service
+    DependsOn: Listener
     Properties:
-      Name: !Sub "${AppName}-etl-schedule"
-      ScheduleExpression: "cron(0 6 * * ? *)"  # 06:00 AM UTC
-      State: ENABLED
-      Targets:
-        - Arn: !GetAtt ETLLambda.Arn
-          Id: ETLLambdaTarget
+      ServiceName: !Ref ServiceName
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: app
+          ContainerPort: 8501
+          TargetGroupArn: !Ref TargetGroup
+      HealthCheckGracePeriodSeconds: 120
 
-  ETLSchedulePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref ETLLambda
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt ETLScheduleRule.Arn
-
-  # ============================================================================
-  # SECRETS MANAGER
-  # ============================================================================
-
-  AppSecrets:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: !Sub "${AppName}/secrets"
-      Description: "AirSense MX API keys and credentials"
-      SecretString: !Sub |
-        {
-          "bedrock_model_id": "anthropic.claude-3-5-haiku-20241022-v1:0",
-          "streamlit_auth_token": "placeholder",
-          "openmeteo_api_url": "https://archive-api.open-meteo.com/v1/archive"
-        }
-
+# ─────────────────────────────────────────────────────────────────────────────
+# OUTPUTS
+# ─────────────────────────────────────────────────────────────────────────────
 Outputs:
-  ALBDnsName:
-    Description: "Application Load Balancer DNS"
-    Value: !GetAtt ApplicationLoadBalancer.DNSName
-    Export:
-      Name: !Sub "${AppName}-alb-dns"
 
-  StreamlitUrl:
-    Description: "Streamlit App URL"
-    Value: !Sub "http://${ApplicationLoadBalancer.DNSName}:8501"
+  AppURL:
+    Description: URL pública de la aplicación Streamlit.
+    Value: !Sub 'http://${ALB.DNSName}'
 
   DataLakeBucket:
-    Description: "S3 Data Lake Bucket"
-    Value: !Ref DataLakeBucket
-    Export:
-      Name: !Sub "${AppName}-data-lake-bucket"
+    Description: Bucket S3 del Data Lake.
+    Value: !If [CreateBucket, !Ref DataLakeBucket, !Ref S3BucketName]
 
-  EC2InstanceId:
-    Description: "EC2 Instance ID (Streamlit)"
-    Value: !Ref StreamlitInstance
+  ECSClusterName:
+    Description: Nombre del cluster ECS.
+    Value: !Ref ECSCluster
 
-  StreamlitLogGroup:
-    Description: "CloudWatch Log Group for Streamlit"
-    Value: !Ref StreamlitLogGroup
+  LogGroupName:
+    Description: Log group de CloudWatch.
+    Value: !Ref LogGroup
 
-  ETLLogGroup:
-    Description: "CloudWatch Log Group for ETL"
-    Value: !Ref ETLLogGroup
+  AppSecretArn:
+    Description: ARN del secreto con configuración de la app.
+    Value: !Ref AppSecret
