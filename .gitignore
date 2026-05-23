@@ -94,4 +94,4 @@ silver_etl_generation.prompt.md
 data/*
 
 # Keep required catalogs
-!data/dim_estaciones.csv
+!data/dim_estaciones.csvcode-reviewer/
